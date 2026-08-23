@@ -740,26 +740,52 @@
 
   <!-- Modal: Edit / Review Scanned Prescription -->
   <div id="modal-edit-prescription" class="modal-overlay" role="dialog" aria-modal="true">
-    <div class="modal-card" style="max-width: 580px;">
+    <div class="modal-card" style="max-width: 600px;">
       <div class="modal-header">
-        <h3 class="modal-title" style="color: var(--primary);">✏️ Review & Edit Extracted Prescription</h3>
+        <h3 class="modal-title" style="color: var(--primary);">📋 Verify Prescription & Medicine Plan</h3>
         <button id="btn-close-edit-modal" class="btn-icon" aria-label="Close">✕</button>
       </div>
-      <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
         <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
-          Review the recognized prescription lines below. You can edit, add medicines, or paste doctor notes to update your plan and daily schedule instantly.
+          Review the recognized prescription lines below or add your doctor's exact medicines. You can also use voice to speak them.
         </p>
 
-        <div>
-          <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px; display: block;">
-            📄 Recognized Prescription Lines & Doctor Notes:
-          </label>
-          <textarea id="edit-ocr-raw-text" rows="6" style="width: 100%; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 12px; font-family: monospace; font-size: 0.88rem; resize: vertical;" placeholder="e.g.&#10;1. Tab Montair-LC 10mg - 0-0-1 after dinner&#10;2. Tab Dolo 650mg - 1-0-1 after food for 3 days&#10;3. Syp Grilinctus 5ml - TDS after food"></textarea>
+        <!-- Uploaded Image Thumbnail Preview -->
+        <div id="edit-modal-img-wrap" style="display: none; text-align: center; background: rgba(0,0,0,0.35); border-radius: 12px; padding: 8px; border: 1px dashed var(--border-color);">
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">📸 Uploaded Prescription Sheet:</div>
+          <img id="edit-modal-img-preview" style="max-height: 140px; max-width: 100%; border-radius: 8px; object-fit: contain;" alt="Uploaded Prescription" />
         </div>
 
-        <div style="display: flex; gap: 10px;">
-          <button type="button" id="btn-reparse-ocr-text" class="btn-cta-coral" style="flex: 1; padding: 10px 14px; font-size: 0.9rem;">
-            ⚡ Update Medicine Plan
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); margin-bottom: 0;">
+              📄 Prescription Lines & Doctor Notes:
+            </label>
+            <button type="button" id="btn-dictate-prescription" class="btn-mini-listen" style="background: rgba(234, 88, 12, 0.2); border: 1px solid var(--primary); color: var(--primary-light); font-size: 0.8rem; padding: 4px 10px;">
+              🎙️ Speak Medicines
+            </button>
+          </div>
+          <textarea id="edit-ocr-raw-text" rows="5" style="width: 100%; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 12px; font-family: monospace; font-size: 0.88rem; resize: vertical;" placeholder="e.g.&#10;1. Tab Montair-LC 10mg - 0-0-1 after dinner&#10;2. Tab Dolo 650mg - 1-0-1 after food&#10;3. Syp Grilinctus 5ml - TDS after food"></textarea>
+        </div>
+
+        <!-- Quick 1-Tap Add Chips -->
+        <div>
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">⚡ Quick Add Popular Medications:</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="quick-med-chips">
+            <button type="button" class="qa-chip chip-add-med" data-line="Tab Montair-LC 10mg - 0-0-1 at night">+ Montair-LC</button>
+            <button type="button" class="qa-chip chip-add-med" data-line="Tab Dolo 650mg - 1-0-1 after food">+ Dolo 650</button>
+            <button type="button" class="qa-chip chip-add-med" data-line="Tab Augmentin 625mg - 1-0-1 after food">+ Augmentin 625</button>
+            <button type="button" class="qa-chip chip-add-med" data-line="Tab Pan 40mg - 1-0-0 before breakfast">+ Pan 40</button>
+            <button type="button" class="qa-chip chip-add-med" data-line="Tab Azithral 500mg - 1-0-0 once daily">+ Azithral 500</button>
+            <button type="button" class="qa-chip chip-add-med" data-line="Tab Telma 40mg - 1-0-0 morning">+ Telma 40</button>
+            <button type="button" class="qa-chip chip-add-med" data-line="Syp Grilinctus 5ml - 1-1-1 after food">+ Grilinctus Syrup</button>
+            <button type="button" class="qa-chip chip-add-med" data-line="Cap Becosules - 1-0-0 morning">+ Becosules</button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 6px;">
+          <button type="button" id="btn-reparse-ocr-text" class="btn-cta-coral" style="flex: 1; padding: 10px 14px; font-size: 0.95rem;">
+            ⚡ Generate My Medicine Plan
           </button>
           <button type="button" id="btn-cancel-edit-modal" class="btn-modal-dismiss" style="padding: 10px 16px;">
             Cancel

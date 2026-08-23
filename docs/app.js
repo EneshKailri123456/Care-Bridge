@@ -934,10 +934,15 @@ function setupEventListeners() {
   const btnCancelEditModal = document.getElementById('btn-cancel-edit-modal');
   const btnReparseOcrText = document.getElementById('btn-reparse-ocr-text');
   const editOcrRawText = document.getElementById('edit-ocr-raw-text');
+  const btnDictatePrescription = document.getElementById('btn-dictate-prescription');
+  const editModalImgWrap = document.getElementById('edit-modal-img-wrap');
+  const editModalImgPreview = document.getElementById('edit-modal-img-preview');
 
-  if (btnEditPrescription) {
-    btnEditPrescription.addEventListener('click', () => {
-      if (editOcrRawText && state.currentDoc) {
+  function openEditPrescriptionModal(prefillOcrText = null) {
+    if (editOcrRawText) {
+      if (prefillOcrText !== null) {
+        editOcrRawText.value = prefillOcrText;
+      } else if (state.currentDoc) {
         if (state.currentDoc.raw_ocr_text && state.currentDoc.raw_ocr_text.length > 15 && !state.currentDoc.raw_ocr_text.startsWith("Uploaded Clinical Prescription:")) {
           editOcrRawText.value = state.currentDoc.raw_ocr_text;
         } else {
@@ -952,7 +957,82 @@ function setupEventListeners() {
           editOcrRawText.value = lines.join('\n');
         }
       }
-      modalEditPrescription?.classList.add('active');
+    }
+
+    if (state.currentUploadedImageUrl && editModalImgPreview && editModalImgWrap) {
+      editModalImgPreview.src = state.currentUploadedImageUrl;
+      editModalImgWrap.style.display = 'block';
+    } else if (editModalImgWrap) {
+      editModalImgWrap.style.display = 'none';
+    }
+
+    modalEditPrescription?.classList.add('active');
+  }
+
+  if (btnEditPrescription) {
+    btnEditPrescription.addEventListener('click', () => openEditPrescriptionModal());
+  }
+
+  // Quick Add Medicine Chips
+  document.querySelectorAll('.chip-add-med').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const line = chip.getAttribute('data-line');
+      if (editOcrRawText && line) {
+        const current = editOcrRawText.value.trim();
+        editOcrRawText.value = current ? `${current}\n${line}` : line;
+        editOcrRawText.scrollTop = editOcrRawText.scrollHeight;
+      }
+    });
+  });
+
+  // Voice Dictate Medicines
+  if (btnDictatePrescription) {
+    let dictationActive = false;
+    let dictationRecognition = null;
+
+    btnDictatePrescription.addEventListener('click', () => {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Voice recognition is not supported in this browser. Please type or tap quick chips.");
+        return;
+      }
+
+      if (dictationActive && dictationRecognition) {
+        dictationRecognition.stop();
+        return;
+      }
+
+      dictationRecognition = new SpeechRecognition();
+      dictationRecognition.lang = state.currentLang === 'hi' ? 'hi-IN' : 'en-US';
+      dictationRecognition.interimResults = false;
+
+      dictationRecognition.onstart = () => {
+        dictationActive = true;
+        btnDictatePrescription.textContent = '🛑 Listening...';
+        btnDictatePrescription.style.background = '#ef4444';
+        btnDictatePrescription.style.color = '#ffffff';
+      };
+
+      dictationRecognition.onresult = (evt) => {
+        const transcript = evt.results[0][0].transcript;
+        if (editOcrRawText && transcript) {
+          const current = editOcrRawText.value.trim();
+          editOcrRawText.value = current ? `${current}\n${transcript}` : transcript;
+        }
+      };
+
+      dictationRecognition.onerror = (e) => {
+        console.log("Dictation error:", e);
+      };
+
+      dictationRecognition.onend = () => {
+        dictationActive = false;
+        btnDictatePrescription.textContent = '🎙️ Speak Medicines';
+        btnDictatePrescription.style.background = '';
+        btnDictatePrescription.style.color = '';
+      };
+
+      dictationRecognition.start();
     });
   }
 
@@ -973,9 +1053,9 @@ function setupEventListeners() {
 
       modalEditPrescription?.classList.remove('active');
       playMedicalChime();
-      speakDirectText("Updating your medicine plan.");
+      speakDirectText("Generating your personalized medicine plan.");
 
-      state.currentDoc = parseClinicalTextToDocument(text, "Updated Prescription");
+      state.currentDoc = parseClinicalTextToDocument(text, "User Prescription");
       state.activeTeachbackIdx = 0;
       state.takenMeds.clear();
       await simplifyCurrentDoc();
@@ -984,7 +1064,8 @@ function setupEventListeners() {
       renderDailyTimeline();
       renderTeachBack();
       renderHospitalWayfinding();
-      speakDirectText("Medicine plan updated successfully!");
+      switchTab('tab-plan');
+      speakDirectText("Medicine plan generated successfully!");
     });
   }
 
@@ -2875,9 +2956,11 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
       console.log("Nemotron cloud API connecting or offline, running local Nemotron vision pipeline:", err);
     }
 
+    let hadDirectOcrMatch = false;
     if (!extracted) {
       // Parse OCR text with Comprehensive Clinical Entity Extractor
       state.currentDoc = parseClinicalTextToDocument(clientOcrText, docTitle);
+      hadDirectOcrMatch = clientOcrText && clientOcrText.trim().length >= 8 && state.currentDoc.medications.length > 0;
     }
 
     // Unselect any pre-canned sample cards
@@ -2914,7 +2997,16 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
 
     switchTab('tab-plan');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    speakDirectText("Prescription extracted with NVIDIA Nemotron! Here is your clear medicine plan.");
+
+    if (!hadDirectOcrMatch && !extracted) {
+      // Open verification modal so user can confirm medicines against their uploaded sheet
+      setTimeout(() => {
+        openEditPrescriptionModal(clientOcrText || "");
+        speakDirectText("Prescription sheet received! Please confirm your medicines or speak them aloud.");
+      }, 900);
+    } else {
+      speakDirectText("Prescription extracted with NVIDIA Nemotron! Here is your clear medicine plan.");
+    }
   };
   reader.readAsDataURL(blob);
 }
