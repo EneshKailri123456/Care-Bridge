@@ -2157,3 +2157,457 @@ body.high-contrast .btn-modal-dismiss {
   border-radius: var(--radius-md);
   pointer-events: none;
 }
+
+/* ==========================================================================
+   RESPONSIVE DESIGN: TABLETS & SMARTPHONES (<1024px)
+   ========================================================================== */
+
+@media (max-width: 1023px) {
+  .top-nav {
+    padding: 12px 20px;
+  }
+  
+  .tab-stepper {
+    padding: 8px 16px;
+    top: 65px;
+  }
+  
+  .main-content {
+    padding: 24px 18px 110px;
+  }
+
+  .desktop-grid-2 {
+    gap: 20px;
+  }
+
+  .hero-scan-box {
+    padding: 32px 24px;
+  }
+
+  .hero-scan-title {
+    font-size: calc(1.8rem * var(--font-scale));
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN: MOBILE PHONES (<768px)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  /* Navigation Bar */
+  .top-nav {
+    padding: 10px 14px;
+  }
+
+  .top-nav-inner {
+    gap: 12px;
+  }
+
+  .brand-title {
+    font-size: 1.25rem;
+  }
+
+  .brand-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .lang-select {
+    padding: 6px 28px 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+
+  /* Tab Stepper with Smooth Horizontal Touch Scrolling */
+  .tab-stepper {
+    padding: 6px 10px;
+    top: 57px;
+  }
+
+  .tab-stepper-inner {
+    gap: 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  .tab-btn {
+    min-width: 120px;
+    padding: 8px 14px;
+    font-size: 0.86rem;
+    scroll-snap-align: start;
+  }
+
+  .tab-btn.active {
+    box-shadow: 0 2px 10px rgba(249, 115, 22, 0.35);
+  }
+
+  /* Main Container */
+  .main-content {
+    padding: 16px 12px 105px;
+  }
+
+  .desktop-grid-2 {
+    gap: 16px;
+  }
+
+  /* Hero Scan Section */
+  .hero-scan-box {
+    padding: 24px 18px;
+    border-radius: 18px;
+    margin-bottom: 8px;
+  }
+
+  .hero-badge {
+    font-size: 0.76rem;
+    margin-bottom: 10px;
+  }
+
+  .hero-scan-title {
+    font-size: calc(1.48rem * var(--font-scale));
+    line-height: 1.25;
+    margin-bottom: 12px;
+  }
+
+  .hero-scan-desc {
+    font-size: calc(0.92rem * var(--font-scale));
+    margin-bottom: 20px;
+    line-height: 1.55;
+  }
+
+  .scan-buttons-grid {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .btn-cta-coral,
+  .btn-cta-glass,
+  .btn-cta-outline {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    justify-content: center;
+  }
+
+  /* Paste Dropzone */
+  .paste-dropzone-box {
+    padding: 16px 12px;
+    margin-bottom: 12px;
+  }
+
+  .paste-icon-wrap {
+    font-size: 1.5rem;
+  }
+
+  .paste-text-main {
+    font-size: 0.98rem;
+  }
+
+  .paste-text-sub {
+    font-size: 0.82rem;
+  }
+
+  /* Sample Cards */
+  .samples-title {
+    font-size: 1.12rem;
+  }
+
+  .samples-subtitle {
+    font-size: 0.86rem;
+  }
+
+  .sample-cards-list {
+    gap: 12px;
+  }
+
+  .sample-card {
+    padding: 14px 14px;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-radius: 16px;
+  }
+
+  .sample-card-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.45rem;
+    border-radius: 12px;
+  }
+
+  .sample-card-title {
+    font-size: 0.98rem;
+  }
+
+  .sample-card-hospital {
+    font-size: 0.82rem;
+  }
+
+  .sample-card .btn-cta-coral {
+    width: 100%;
+    margin-top: 4px;
+    padding: 9px 14px;
+    font-size: 0.88rem;
+    border-radius: var(--radius-full);
+  }
+
+  /* Cards in General */
+  .card {
+    padding: 18px 16px;
+    border-radius: 18px;
+    margin-bottom: 6px;
+  }
+
+  .card-title {
+    font-size: calc(1.12rem * var(--font-scale));
+    gap: 8px;
+  }
+
+  .card-title-row {
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* Audio Player Card */
+  .audio-player-card {
+    padding: 20px 16px;
+    border-radius: 18px;
+    margin-bottom: 16px;
+  }
+
+  .audio-controls {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .btn-audio-play {
+    width: 46px;
+    height: 46px;
+    font-size: 1.25rem;
+  }
+
+  .karaoke-box {
+    padding: 12px 14px;
+    font-size: calc(0.96rem * var(--font-scale));
+    min-height: 60px;
+  }
+
+  /* Medication Cards */
+  .medication-card {
+    padding: 14px 14px;
+    gap: 12px;
+    border-radius: 14px;
+  }
+
+  .med-pill-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.45rem;
+    border-radius: 12px;
+  }
+
+  .med-name {
+    font-size: calc(1rem * var(--font-scale));
+  }
+
+  .med-instruction {
+    font-size: 0.88rem;
+  }
+
+  /* Timeline & Adherence */
+  .timeline-slot-header {
+    padding: 11px 14px;
+    font-size: 0.98rem;
+  }
+
+  .timeline-item-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .adherence-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .btn-alarm-trigger {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 14px;
+  }
+
+  /* Teach-Back Section */
+  .teachback-card {
+    padding: 20px 16px;
+    border-radius: 18px;
+  }
+
+  .teachback-title {
+    font-size: 1.15rem;
+  }
+
+  .teachback-question {
+    padding: 14px 14px;
+    font-size: 1.02rem;
+    margin-bottom: 14px;
+  }
+
+  .option-btn {
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    gap: 10px;
+    border-radius: 12px;
+  }
+
+  .option-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 0.82rem;
+  }
+
+  .btn-mic-record {
+    width: 60px;
+    height: 60px;
+    font-size: 1.6rem;
+  }
+
+  /* Wayfinding & Emergency */
+  .countdown-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 18px 16px;
+  }
+
+  .btn-map-action {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+  }
+
+  .helpline-action-card {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .helpline-icon-wrap {
+    width: 40px;
+    height: 40px;
+    font-size: 1.3rem;
+    border-radius: 10px;
+  }
+
+  .helpline-title {
+    font-size: 1rem;
+  }
+
+  .helpline-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .helpline-dial-badge {
+    padding: 4px 12px;
+    font-size: 0.82rem;
+  }
+
+  /* Q&A Assistant */
+  .qa-input-row {
+    gap: 6px;
+  }
+
+  .qa-input-field {
+    padding: 10px 14px;
+    font-size: 0.92rem;
+  }
+
+  .btn-mic-qa, .btn-submit-qa {
+    width: 42px;
+    height: 42px;
+    font-size: 1.1rem;
+  }
+
+  .qa-chips-grid {
+    gap: 6px;
+  }
+
+  .qa-chip {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+
+  /* Bottom Emergency Dock */
+  .bottom-dock {
+    padding: 8px 12px;
+  }
+
+  .bottom-dock-inner {
+    gap: 6px;
+  }
+
+  .btn-sos {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+
+  .bottom-patient-label {
+    font-size: 0.78rem;
+    padding: 5px 8px;
+    max-width: 130px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .btn-bottom-listen {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+
+  /* Modals */
+  .alarm-modal-card,
+  .modal-emergency-card {
+    padding: 22px 18px;
+    max-width: 95%;
+  }
+
+  .emergency-modal-title {
+    font-size: 1.35rem;
+  }
+
+  .camera-view-box {
+    height: 240px;
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN: ULTRA-COMPACT SMARTPHONES (<420px)
+   ========================================================================== */
+
+@media (max-width: 420px) {
+  .brand-title {
+    font-size: 1.1rem;
+  }
+
+  .hero-scan-title {
+    font-size: calc(1.35rem * var(--font-scale));
+  }
+
+  .bottom-patient-label {
+    display: none;
+  }
+
+  .btn-sos, .btn-bottom-listen {
+    flex: 1;
+    justify-content: center;
+  }
+}
