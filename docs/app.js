@@ -3,21 +3,6 @@
  * Mobile-first, accessible, multilingual assistant for elderly & low-literacy patients.
  */
 
-// Centralized API Base URL Resolver for Local Dev, Render Hosting & GitHub Pages
-function getApiUrl(endpoint) {
-  const clean = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
-  const custom = (localStorage.getItem('carebridge_backend_url') || '').trim();
-  if (custom) {
-    return `${custom.replace(/\/$/, '')}${clean}`;
-  }
-  // If hosted on GitHub Pages and no custom backend set, use default Render backend
-  if (window.location.hostname.includes('github.io')) {
-    return `https://carebridge-api.onrender.com${clean}`;
-  }
-  // Same origin (FastAPI backend) or localhost
-  return clean;
-}
-
 // Application State
 const state = {
   samples: [],
@@ -34,6 +19,11 @@ const state = {
   isLightTheme: false, // Default is Dark Mode
   cameraStream: null
 };
+
+// Base API URL: uses relative URL when running locally, and Render URL when deployed to GitHub Pages
+const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' || window.location.hostname === '')
+  ? ''
+  : (localStorage.getItem('carebridge_api_url') || 'https://care-bridge-api.onrender.com');
 
 // UI Localization Dictionary
 const UI_STRINGS = {
@@ -767,71 +757,18 @@ function setupEventListeners() {
         localStorage.setItem('carebridge_theme', state.isLightTheme ? 'light' : 'dark');
       } catch (e) {}
     });
-  }
 
-  // Backend API Server Modal
-  const btnBackendSettings = document.getElementById('btn-backend-settings');
-  const modalBackendSettings = document.getElementById('modal-backend-settings');
-  const btnCloseBackendSettings = document.getElementById('btn-close-backend-settings');
-  const btnTestBackend = document.getElementById('btn-test-backend');
-  const btnSaveBackend = document.getElementById('btn-save-backend');
-  const inputBackendUrl = document.getElementById('input-backend-url');
-  const backendStatusMsg = document.getElementById('backend-status-msg');
-
-  if (btnBackendSettings && modalBackendSettings) {
-    btnBackendSettings.addEventListener('click', () => {
-      if (inputBackendUrl) {
-        inputBackendUrl.value = localStorage.getItem('carebridge_backend_url') || '';
-      }
-      modalBackendSettings.style.display = 'flex';
-      modalBackendSettings.classList.add('active');
-    });
-
-    btnCloseBackendSettings?.addEventListener('click', () => {
-      modalBackendSettings.style.display = 'none';
-      modalBackendSettings.classList.remove('active');
-    });
-
-    btnTestBackend?.addEventListener('click', async () => {
-      const url = (inputBackendUrl?.value || '').trim();
-      const testUrl = url ? `${url.replace(/\/$/, '')}/api/health` : getApiUrl('/api/health');
-      if (backendStatusMsg) {
-        backendStatusMsg.style.background = 'rgba(59, 130, 246, 0.1)';
-        backendStatusMsg.style.color = '#60a5fa';
-        backendStatusMsg.textContent = `⏳ Testing connection to ${testUrl}...`;
-      }
-      try {
-        const resp = await fetch(testUrl, { signal: AbortSignal.timeout(8000) });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (backendStatusMsg) {
-            backendStatusMsg.style.background = 'rgba(34, 197, 94, 0.15)';
-            backendStatusMsg.style.color = '#4ade80';
-            backendStatusMsg.textContent = `✅ Connected! Status: ${data.status || 'healthy'}`;
-          }
-        } else {
-          throw new Error(`Server returned HTTP ${resp.status}`);
-        }
-      } catch (err) {
-        if (backendStatusMsg) {
-          backendStatusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
-          backendStatusMsg.style.color = '#f87171';
-          backendStatusMsg.textContent = `❌ Connection failed: ${err.message}. (Free Render servers may take ~30-50s to spin up on first request).`;
-        }
-      }
-    });
-
-    btnSaveBackend?.addEventListener('click', async () => {
-      const url = (inputBackendUrl?.value || '').trim();
-      if (url) {
-        localStorage.setItem('carebridge_backend_url', url);
+    // Check if user previously explicitly chose light theme; otherwise default is dark
+    try {
+      const savedTheme = localStorage.getItem('carebridge_theme');
+      if (savedTheme === 'light') {
+        state.isLightTheme = true;
+        document.body.classList.add('light-theme');
       } else {
-        localStorage.removeItem('carebridge_backend_url');
+        state.isLightTheme = false;
+        document.body.classList.remove('light-theme');
       }
-      modalBackendSettings.style.display = 'none';
-      modalBackendSettings.classList.remove('active');
-      await loadSamples();
-    });
+    } catch (e) {}
   }
 
   // Audio Play / Pause
@@ -1148,8 +1085,8 @@ function renderQAChips(lang) {
   });
 }
 
-// ================= BUILT-IN CLINICAL SAMPLE CASES =================
-const FALLBACK_SAMPLES = [
+// Embedded Fallback Samples for Standalone & Offline Mode
+const EMBEDDED_SAMPLE_DATA = [
   {
     id: "sample_post_op_discharge",
     title: "🏥 Post-Surgery Discharge Summary (Orthopedics)",
@@ -1157,6 +1094,7 @@ const FALLBACK_SAMPLES = [
     badge: "Discharge Summary",
     document_type: "discharge_summary",
     patient_name: "Ramesh Chandra (Age 68)",
+    patient_language: "en",
     hospital: "Apollo Speciality Hospital, Bannerghatta Road, Bengaluru",
     med_count: 4,
     data: {
@@ -1223,8 +1161,7 @@ const FALLBACK_SAMPLES = [
         "Foul-smelling pus or active bleeding from the knee dressing.",
         "Sudden shortness of breath or chest pain (Call 108 immediately)."
       ],
-      raw_ocr_text: "Discharge Summary - Apollo Speciality Hospital - Total Knee Arthroplasty",
-      confidence_notes: "High confidence clinical extraction"
+      raw_ocr_text: "Discharge Summary - Apollo Speciality Hospital - Total Knee Arthroplasty"
     }
   },
   {
@@ -1234,6 +1171,7 @@ const FALLBACK_SAMPLES = [
     badge: "Prescription",
     document_type: "prescription",
     patient_name: "Savitri Devi (Age 72)",
+    patient_language: "hi",
     hospital: "Fortis Hospital, Cunningham Road, Bengaluru",
     med_count: 3,
     data: {
@@ -1287,8 +1225,7 @@ const FALLBACK_SAMPLES = [
         "Extreme dizziness, sudden cold sweating, or trembling hands (low sugar — eat 2 spoons of sugar or fruit juice immediately).",
         "Severe throbbing headache, blurred vision, or chest tightness (blood pressure spike)."
       ],
-      raw_ocr_text: "Fortis Healthcare - Diabetes & Hypertension Management Plan",
-      confidence_notes: "High confidence extraction"
+      raw_ocr_text: "Fortis Healthcare - Diabetes & Hypertension Management Plan"
     }
   },
   {
@@ -1298,6 +1235,7 @@ const FALLBACK_SAMPLES = [
     badge: "Prescription",
     document_type: "prescription",
     patient_name: "Gopalakrishnan N. (Age 75)",
+    patient_language: "kn",
     hospital: "Max Super Speciality Hospital, Saket",
     med_count: 4,
     data: {
@@ -1362,8 +1300,7 @@ const FALLBACK_SAMPLES = [
         "Bluish color on lips, nailbeds, or tongue (Go to Emergency immediately).",
         "High fever above 102°F or coughing up rust-colored blood."
       ],
-      raw_ocr_text: "Max Hospital - Pulmonology Prescription",
-      confidence_notes: "High confidence extraction"
+      raw_ocr_text: "Max Hospital - Pulmonology Prescription for Acute Bronchitis"
     }
   },
   {
@@ -1373,6 +1310,7 @@ const FALLBACK_SAMPLES = [
     badge: "Discharge Summary",
     document_type: "discharge_summary",
     patient_name: "Devadas Pillai (Age 65)",
+    patient_language: "ta",
     hospital: "Narayana Health City, Bommasandra, Bengaluru",
     med_count: 4,
     data: {
@@ -1429,106 +1367,148 @@ const FALLBACK_SAMPLES = [
         wayfinding_steps: [
           "Enter through Gate 1 (Cardiac Block).",
           "Head to Ground Floor Outpatient Hall.",
-          "Proceed to Counter 8 for Cardiac Consultation."
+          "Present token at Counter 8 for ECG and Doctor Consultation."
         ]
       },
       warning_symptoms: [
-        "Chest heaviness, squeezing pressure, or pain radiating to left arm/jaw.",
-        "Sudden fainting, cold perspiration, or irregular racing heartbeat.",
-        "Unusual heavy bleeding from gums, nose, or in urine/stool (Call doctor immediately)."
+        "Heavy chest pressure, squeezing pain, or pain spreading to left arm/jaw.",
+        "Sudden unusual black stools or unexplained heavy bruising (signs of excessive bleeding).",
+        "Severe shortness of breath when lying flat."
       ],
-      raw_ocr_text: "Narayana Health - Cardiac Angioplasty Order",
-      confidence_notes: "High confidence extraction"
+      raw_ocr_text: "Narayana Health - Post Angioplasty Cardiac Care Plan"
     }
   }
 ];
 
-// Helper: Generate structured simplified plan locally
-function generateLocalSimplifiedPlan(doc, lang = 'en') {
+// Client-Side Plan Simplifier (Resilient fallback when backend API is offline)
+function clientSideSimplify(doc, lang = 'en') {
   const t = UI_STRINGS[lang] || UI_STRINGS.en;
-  const langLabels = { en: "English", hi: "हिंदी", kn: "ಕನ್ನಡ", ta: "தமிழ்", te: "తెలుగు", bn: "বাংলা", es: "Español" };
-  const count = (doc && doc.medications) ? doc.medications.length : 0;
-  
-  const greeting = (t.greeting || "Welcome! Here is your clear, easy-to-follow medicine plan.");
-  const summary = (t.summary_template || `Your doctor has prescribed ${count} medicines. Taking them on time will help you heal safely.`);
+  const medCount = doc.medications?.length || 0;
+  const greeting = (UI_STRINGS[lang]?.scanSubtitle ? "Hello! Here is your clear, simple daily care plan from your doctor." : "Hello! Here is your clear medicine plan.");
+  const summary = `Your doctor has prescribed ${medCount} medications to keep you healthy and recovering smoothly.`;
 
   const dailySchedule = { morning: [], afternoon: [], night: [] };
-  const simplifiedMeds = [];
   const audioSentences = [greeting, summary];
+  const simplifiedMeds = [];
 
-  (doc?.medications || []).forEach((med, idx) => {
-    let iconType = med.pill_color_type || "white_tablet";
-    if (med.name.toLowerCase().includes("inhaler")) iconType = "inhaler";
-    else if (med.name.toLowerCase().includes("syrup")) iconType = "blue_liquid";
+  (doc.medications || []).forEach((med, idx) => {
+    const medIdx = idx + 1;
+    const timingSlots = [];
+    const timingLabels = [];
+    (med.timing || ['morning']).forEach(slot => {
+      const s = slot.toLowerCase();
+      if (['morning', 'afternoon', 'night'].includes(s)) {
+        timingSlots.push(s);
+        if (s === 'morning') timingLabels.push(t.slotMorningHeader ? "Morning" : "Morning");
+        else if (s === 'afternoon') timingLabels.push("Afternoon");
+        else if (s === 'night') timingLabels.push("Night");
+      }
+    });
+    if (timingSlots.length === 0) timingSlots.push('morning');
 
-    const timingList = Array.isArray(med.timing) ? med.timing : ["morning"];
-    timingList.forEach(slot => {
+    const timingText = timingLabels.join(', ') || 'Morning';
+    const plainInst = med.special_instructions || "Take with a full glass of water after food.";
+    const duration = med.duration_days ? `${med.duration_days} days` : "Ongoing";
+
+    simplifiedMeds.push({
+      name: med.name,
+      dose: med.dose,
+      timing_text: timingText,
+      timing_slots: timingSlots,
+      plain_instructions: plainInst,
+      icon_type: med.pill_color_type || "white_tablet"
+    });
+
+    timingSlots.forEach(slot => {
       if (dailySchedule[slot]) {
         dailySchedule[slot].push({
+          id: `med_${medIdx}_${slot}`,
+          med_base_id: `med_${medIdx}`,
+          slot: slot,
           name: med.name,
           dose: med.dose,
-          instructions: med.special_instructions,
-          purpose: med.purpose,
-          icon_type: iconType
+          instructions: plainInst,
+          purpose: med.purpose || "For recovery",
+          icon: med.pill_color_type || "white_tablet",
+          duration: duration
         });
       }
     });
 
-    const timingStr = timingList.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" & ");
-    simplifiedMeds.push({
-      name: med.name,
-      dose: med.dose,
-      timing_text: timingStr,
-      instructions: med.special_instructions || "Take with water as directed.",
-      purpose: med.purpose || "Prescribed by your doctor",
-      duration_days: med.duration_days || 7,
-      is_ongoing: !med.duration_days,
-      icon_type: iconType
-    });
-
-    audioSentences.push(`Medicine ${idx + 1}: ${med.name}, ${med.dose}. Take in the ${timingStr}. ${med.special_instructions || ''}`);
+    audioSentences.push(`Medicine ${medIdx}: ${med.name}, ${med.dose}. Take this in the ${timingText}. ${plainInst}`);
   });
 
-  if (doc?.follow_up?.date) {
-    audioSentences.push(`Your next doctor visit is scheduled for ${doc.follow_up.date} at ${doc.follow_up.location || 'Hospital'}.`);
+  let followUpStr = "";
+  if (doc.follow_up && doc.follow_up.date) {
+    followUpStr = `Next Doctor Visit on ${doc.follow_up.date} at ${doc.follow_up.location || 'Hospital'} (${doc.follow_up.department || 'OPD'}).`;
+    audioSentences.push(followUpStr);
   }
 
-  if (doc?.warning_symptoms && doc.warning_symptoms.length > 0) {
-    audioSentences.push(`Important: Contact doctor immediately if you notice ${doc.warning_symptoms[0]}.`);
-  }
+  (doc.warning_symptoms || []).forEach(w => {
+    audioSentences.push(`Warning: ${w}`);
+  });
 
   return {
     language: lang,
-    language_label: langLabels[lang] || "English",
+    language_label: lang.toUpperCase(),
     greeting: greeting,
     overall_summary: summary,
-    audio_sentences: audioSentences,
     medications: simplifiedMeds,
     daily_schedule: dailySchedule,
-    follow_up_summary: doc?.follow_up ? `Visit ${doc.follow_up.department || ''} at ${doc.follow_up.location || ''} on ${doc.follow_up.date || ''}` : "Follow up as advised.",
-    warning_summary: doc?.warning_symptoms ? doc.warning_symptoms.join(". ") : ""
+    follow_up_summary: followUpStr,
+    warning_alerts: doc.warning_symptoms || [],
+    read_aloud_script: audioSentences.join(" "),
+    audio_sentences: audioSentences
   };
 }
 
-// Helper: Generate verification teach-back questions locally
-function generateLocalTeachbackQuestions(doc, lang = 'en') {
+// Client-Side Teach-Back Generator
+function clientSideGenerateQuestions(doc, lang = 'en') {
   const questions = [];
-  (doc?.medications || []).forEach((med, idx) => {
-    const timingStr = (med.timing || ["morning"]).join(" & ");
-    questions.push({
-      id: `tb_q_${idx}`,
-      medication_name: med.name,
-      question_text: `When and how should you take ${med.name}?`,
-      spoken_prompt: `Can you confirm when you will take your ${med.name}?`,
+  (doc.medications || []).forEach((med, idx) => {
+    const medName = med.name;
+    const dose = med.dose || "as prescribed";
+    const timings = (med.timing || ['scheduled time']).join(', ');
+    const nameLower = medName.toLowerCase();
+    const qId = `q_med_${idx + 1}`;
+
+    let q = {
+      id: qId,
+      medicine_name: medName,
+      question: `When and how should you take your '${medName}' (${dose})?`,
+      correct_concept: `In the ${timings} with meals as prescribed`,
       options: [
-        `Take ${med.dose} in the ${timingStr} (${med.special_instructions || 'with meals'})`,
-        `Take it only once a week whenever I have pain`,
-        `Stop taking it immediately if I feel slightly better tomorrow`
+        `In the ${timings} with meals with a glass of water (Correct schedule)`,
+        `All at once on an empty stomach without water`,
+        `Only once a week in the middle of the night`
       ],
       correct_option_index: 0,
-      encouraging_praise: `🌟 Brilliant! That's exactly right. Take ${med.name} in the ${timingStr}.`,
-      gentle_explanation: `💛 That's close! Remember to take ${med.name} (${med.dose}) in the ${timingStr} as prescribed.`
-    });
+      spoken_keywords: ["meal", "food", "water", "after", "morning", "night", "breakfast", "dinner"],
+      gentle_explanation: `Always take ${medName} with or after food as scheduled. Having food in your stomach prevents acidity and promotes healing.`,
+      encouraging_praise: `Spot on! Taking ${medName} according to your scheduled times keeps your recovery on track.`
+    };
+
+    if (nameLower.includes('panto') || nameLower.includes('omepra') || nameLower.includes('pan 40')) {
+      q.question = `How and when should you take your '${medName}' (${dose}) in the morning?`;
+      q.options = [
+        "30 minutes before breakfast with a glass of water (Empty stomach)",
+        "Right after a heavy oily lunch",
+        "Only if you feel sudden stomach discomfort at night"
+      ];
+      q.gentle_explanation = `${medName} coats and shields your stomach against acid irritation. Taking it 30 minutes before breakfast gives it time to activate.`;
+      q.encouraging_praise = `Spot on! Taking ${medName} 30 minutes before morning food ensures all-day stomach protection.`;
+    } else if (nameLower.includes('augmentin') || nameLower.includes('amox') || nameLower.includes('cef')) {
+      q.question = `What is the most critical instruction for taking your '${medName}' (${dose}) course?`;
+      q.options = [
+        "Complete the entire prescribed days even if you feel completely better",
+        "Stop taking it immediately once your fever or pain subsides",
+        "Take all remaining pills together at once if you miss a day"
+      ];
+      q.gentle_explanation = `Stopping antibiotics early allows bacteria to survive. Always finish every single dose of ${medName}.`;
+      q.encouraging_praise = `Brilliant! Completing your full course of ${medName} guarantees the infection is wiped out safely.`;
+    }
+
+    questions.push(q);
   });
   return questions;
 }
@@ -1536,19 +1516,24 @@ function generateLocalTeachbackQuestions(doc, lang = 'en') {
 // Fetch Sample Documents
 async function loadSamples() {
   try {
-    const res = await fetch(getApiUrl('/api/samples'), { signal: AbortSignal.timeout(2000) });
-    if (res.ok) {
-      state.samples = await res.json();
-    } else {
-      state.samples = FALLBACK_SAMPLES;
-    }
+    const res = await fetch(`${API_BASE}/api/samples`);
+    if (!res.ok) throw new Error("API not available");
+    state.samples = await res.json();
   } catch (err) {
-    console.warn("Using offline clinical samples:", err);
-    state.samples = FALLBACK_SAMPLES;
+    console.log("Using embedded sample documents fallback:", err);
+    state.samples = EMBEDDED_SAMPLE_DATA.map(s => ({
+      id: s.id,
+      title: s.title,
+      subtitle: s.subtitle,
+      badge: s.badge,
+      patient_name: s.patient_name,
+      hospital: s.hospital,
+      med_count: s.med_count
+    }));
   }
+
   renderSampleCards();
 
-  // Auto-load first sample as default quietly on initial startup
   if (state.samples.length > 0) {
     await selectSample(state.samples[0].id, false);
   }
@@ -1560,13 +1545,11 @@ function renderSampleCards() {
   if (!container) return;
   container.innerHTML = '';
 
-  const sampleList = (state.samples && state.samples.length > 0) ? state.samples : FALLBACK_SAMPLES;
-  sampleList.forEach((sample, idx) => {
+  state.samples.forEach((sample, idx) => {
     const card = document.createElement('div');
     card.className = `sample-card ${idx === 0 ? 'active' : ''}`;
     card.id = `sample-card-${sample.id}`;
 
-    // Choose relevant medical icon for the sample
     let icon = "📄";
     if (sample.id.includes("post_op") || sample.id.includes("surgery")) icon = "🏥";
     else if (sample.id.includes("diabetes") || sample.id.includes("chronic")) icon = "💊";
@@ -1580,7 +1563,7 @@ function renderSampleCards() {
         <div class="sample-card-hospital">${sample.subtitle}</div>
         <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
           <span class="badge" style="background: var(--secondary-subtle); color: var(--secondary-dark);">${sample.badge}</span>
-          <span class="badge" style="background: var(--primary-subtle); color: var(--primary-dark);">${sample.med_count || (sample.data ? sample.data.medications.length : 3)} Medicines</span>
+          <span class="badge" style="background: var(--primary-subtle); color: var(--primary-dark);">${sample.med_count} Medicines</span>
           <span class="badge" style="background: var(--bg-main); color: var(--text-muted);">${sample.patient_name || 'Patient'}</span>
         </div>
       </div>
@@ -1601,7 +1584,7 @@ async function selectSample(sampleId, switchToPlan = true) {
 
   let loaded = false;
   try {
-    const res = await fetch(getApiUrl(`/api/samples/${sampleId}?lang=${state.currentLang}`), { signal: AbortSignal.timeout(2500) });
+    const res = await fetch(`${API_BASE}/api/samples/${sampleId}?lang=${state.currentLang}`);
     if (res.ok) {
       const data = await res.json();
       state.currentDoc = data.document;
@@ -1610,14 +1593,14 @@ async function selectSample(sampleId, switchToPlan = true) {
       loaded = true;
     }
   } catch (err) {
-    console.warn("Backend sample detail timeout, generating locally:", err);
+    console.log("Backend API not reachable, loading sample locally:", err);
   }
 
   if (!loaded) {
-    const sampleObj = (state.samples && state.samples.length > 0 ? state.samples : FALLBACK_SAMPLES).find(s => s.id === sampleId) || FALLBACK_SAMPLES[0];
-    state.currentDoc = sampleObj.data || sampleObj;
-    state.currentSimplified = generateLocalSimplifiedPlan(state.currentDoc, state.currentLang);
-    state.teachbackQuestions = generateLocalTeachbackQuestions(state.currentDoc, state.currentLang);
+    const found = EMBEDDED_SAMPLE_DATA.find(s => s.id === sampleId) || EMBEDDED_SAMPLE_DATA[0];
+    state.currentDoc = JSON.parse(JSON.stringify(found.data));
+    state.currentSimplified = clientSideSimplify(state.currentDoc, state.currentLang);
+    state.teachbackQuestions = clientSideGenerateQuestions(state.currentDoc, state.currentLang);
   }
 
   state.activeTeachbackIdx = 0;
@@ -1626,12 +1609,12 @@ async function selectSample(sampleId, switchToPlan = true) {
   // Update UI Header & Patient Badge
   const t = UI_STRINGS[state.currentLang] || UI_STRINGS.en;
   const docStatus = document.getElementById('lbl-header-doc-status');
-  if (docStatus) {
+  if (docStatus && state.currentDoc) {
     const docTypeLbl = state.currentDoc.document_type === 'discharge_summary' ? 'Discharge Summary' : 'Prescription';
     docStatus.textContent = `${t.patientPrefix || "Active: "}${state.currentDoc.patient_name || 'Patient'} (${docTypeLbl})`;
   }
   const lblActivePatient = document.getElementById('lbl-active-patient');
-  if (lblActivePatient) {
+  if (lblActivePatient && state.currentDoc) {
     lblActivePatient.textContent = `${t.patientPrefix || "Patient: "}${state.currentDoc.patient_name || 'Patient'}`;
   }
 
@@ -1650,43 +1633,35 @@ async function selectSample(sampleId, switchToPlan = true) {
 // Call API to simplify current document into selected language
 async function simplifyCurrentDoc() {
   if (!state.currentDoc) return;
-  let simplifiedSuccess = false;
+  let simplified = false;
   try {
-    const res = await fetch(getApiUrl('/api/simplify'), {
+    const res = await fetch(`${API_BASE}/api/simplify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         document: state.currentDoc,
         target_language: state.currentLang
-      }),
-      signal: AbortSignal.timeout(3000)
+      })
     });
     if (res.ok) {
       state.currentSimplified = await res.json();
-      simplifiedSuccess = true;
+      const tbRes = await fetch(`${API_BASE}/api/teachback/questions?lang=${state.currentLang}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state.currentDoc)
+      });
+      if (tbRes.ok) {
+        state.teachbackQuestions = await tbRes.json();
+      }
+      simplified = true;
     }
   } catch (err) {
-    console.warn("Backend simplification timeout, generating locally:", err);
+    console.log("Using client-side simplifier fallback:", err);
   }
 
-  if (!simplifiedSuccess) {
-    state.currentSimplified = generateLocalSimplifiedPlan(state.currentDoc, state.currentLang);
-  }
-
-  try {
-    const tbRes = await fetch(getApiUrl(`/api/teachback/questions?lang=${state.currentLang}`), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state.currentDoc),
-      signal: AbortSignal.timeout(2000)
-    });
-    if (tbRes.ok) {
-      state.teachbackQuestions = await tbRes.json();
-    } else {
-      state.teachbackQuestions = generateLocalTeachbackQuestions(state.currentDoc, state.currentLang);
-    }
-  } catch (e) {
-    state.teachbackQuestions = generateLocalTeachbackQuestions(state.currentDoc, state.currentLang);
+  if (!simplified) {
+    state.currentSimplified = clientSideSimplify(state.currentDoc, state.currentLang);
+    state.teachbackQuestions = clientSideGenerateQuestions(state.currentDoc, state.currentLang);
   }
 
   renderSimplifiedPlan();
@@ -1979,7 +1954,7 @@ async function evaluateTeachBackChoice(questionId, selectedIdx, clickedBtn) {
   });
 
   try {
-    const res = await fetch(getApiUrl('/api/teachback/evaluate'), {
+    const res = await fetch(`${API_BASE}/api/teachback/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2115,7 +2090,7 @@ async function startTeachbackVoiceRecognition() {
     const activeQ = state.teachbackQuestions[state.activeTeachbackIdx];
     if (activeQ && event.results[event.results.length - 1].isFinal) {
       btnMic.classList.remove('recording');
-      const res = await fetch(getApiUrl('/api/teachback/evaluate'), {
+      const res = await fetch(`${API_BASE}/api/teachback/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2275,7 +2250,7 @@ async function playSentenceChain(index) {
     formData.append('lang', state.currentLang);
     formData.append('rate', state.speechRate);
 
-    const res = await fetch(getApiUrl('/api/tts'), {
+    const res = await fetch(`${API_BASE}/api/tts`, {
       method: 'POST',
       body: formData
     });
@@ -2401,7 +2376,7 @@ async function speakDirectText(text) {
     formData.append('lang', state.currentLang);
     formData.append('rate', state.speechRate);
 
-    const res = await fetch(getApiUrl('/api/tts'), {
+    const res = await fetch(`${API_BASE}/api/tts`, {
       method: 'POST',
       body: formData
     });
@@ -2675,7 +2650,7 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
     formData.append('image_base64', base64Data);
 
     try {
-      const res = await fetch(getApiUrl('/api/extract'), {
+      const res = await fetch(`${API_BASE}/api/extract`, {
         method: 'POST',
         body: formData
       });
@@ -2732,8 +2707,9 @@ async function handleQASubmit() {
     if (disclaimer) disclaimer.textContent = '';
   }
 
+  let answered = false;
   try {
-    const res = await fetch(getApiUrl('/api/ask'), {
+    const res = await fetch(`${API_BASE}/api/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2742,18 +2718,76 @@ async function handleQASubmit() {
         language: state.currentLang
       })
     });
-    const data = await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (ansText) ansText.textContent = data.answer;
+      if (disclaimer) disclaimer.textContent = `⚠️ Note: ${data.safety_disclaimer}`;
+      if (ansBox) ansBox.style.display = 'block';
 
+      playMedicalChime();
+      speakDirectText(data.spoken_answer);
+      answered = true;
+    }
+  } catch (err) {
+    console.log("Using client-side QA assistant fallback:", err);
+  }
+
+  if (!answered) {
+    const data = clientSideAnswerQA(q, state.currentDoc, state.currentLang);
     if (ansText) ansText.textContent = data.answer;
     if (disclaimer) disclaimer.textContent = `⚠️ Note: ${data.safety_disclaimer}`;
     if (ansBox) ansBox.style.display = 'block';
 
     playMedicalChime();
     speakDirectText(data.spoken_answer);
-  } catch (err) {
-    console.error("Error answering QA:", err);
-    if (ansText) ansText.textContent = "I could not answer at this moment. Please consult your doctor or pharmacist directly.";
   }
+}
+
+// Client-Side Medical Q&A Fallback
+function clientSideAnswerQA(q, doc, lang = 'en') {
+  const qLower = (q || '').toLowerCase();
+  if (qLower.includes('miss') || qLower.includes('skip') || qLower.includes('forgot') || qLower.includes('भूल')) {
+    return {
+      answer: "If you missed a dose, take it as soon as you remember. If it is almost time for your next dose, skip the missed one. Never take two doses at once.",
+      spoken_answer: "If you missed a dose, take it as soon as you remember. Never take two doses at once.",
+      safety_disclaimer: "Never double up on missed doses."
+    };
+  }
+  if (qLower.includes('milk') || qLower.includes('tea') || qLower.includes('coffee') || qLower.includes('दूध') || qLower.includes('चाय')) {
+    return {
+      answer: "It is best to take all tablets with a full glass of plain water. Avoid taking medicines with hot tea, coffee, or milk unless directed by your doctor.",
+      spoken_answer: "It is best to take all tablets with a full glass of plain water.",
+      safety_disclaimer: "Plain water is the safest liquid for swallowing oral medications."
+    };
+  }
+  if (qLower.includes('visit') || qLower.includes('appointment') || qLower.includes('doctor') || qLower.includes('when') || qLower.includes('hospital')) {
+    const date = doc?.follow_up?.date || "in 7 days";
+    const loc = doc?.follow_up?.location || "Clinic";
+    return {
+      answer: `Your next follow-up appointment is on ${date} at ${loc}.`,
+      spoken_answer: `Your next follow-up appointment is on ${date} at ${loc}.`,
+      safety_disclaimer: "Bring all your discharge papers and prescription copies with you."
+    };
+  }
+  if (qLower.includes('crush') || qLower.includes('break') || qLower.includes('chew') || qLower.includes('तोड़')) {
+    return {
+      answer: "Swallow tablets whole with water. Do not crush, break, or chew coated or sustained-release tablets unless instructed by your doctor.",
+      spoken_answer: "Swallow tablets whole with water. Do not crush or chew them.",
+      safety_disclaimer: "Crushing tablets can alter medicine release speed and safety."
+    };
+  }
+  if (qLower.includes('dizzy') || qLower.includes('nausea') || qLower.includes('sick') || qLower.includes('चक्कर')) {
+    return {
+      answer: "If you feel dizzy or lightheaded, sit down immediately and drink water. If severe nausea, fever, or chest pain occurs, contact your doctor or use the Emergency SOS button.",
+      spoken_answer: "If you feel dizzy, sit down immediately and drink water. If severe symptoms occur, use the Emergency SOS button.",
+      safety_disclaimer: "Dizziness can cause falls. Always rest before standing up."
+    };
+  }
+  return {
+    answer: "Please take your prescribed medicines with water after meals as outlined in your care plan.",
+    spoken_answer: "Please take your prescribed medicines with water after meals as outlined in your care plan.",
+    safety_disclaimer: "Always consult your doctor or pharmacist with specific health questions."
+  };
 }
 
 // Universal 16kHz PCM WAV Audio Recorder (Captures Raw Microphone Audio)
@@ -2990,7 +3024,7 @@ async function stopQAVoiceRecognition() {
     formData.append('audio', wavBlob, 'recording.wav');
     formData.append('lang', state.currentLang);
 
-    const res = await fetch(getApiUrl('/api/stt'), {
+    const res = await fetch(`${API_BASE}/api/stt`, {
       method: 'POST',
       body: formData
     });
@@ -3031,7 +3065,7 @@ async function initNotificationSystem() {
   // Register Service Worker for PWA and background alarms
   if ('serviceWorker' in navigator) {
     try {
-      swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      swRegistration = await navigator.serviceWorker.register('sw.js');
       console.log("CareBridge Service Worker registered:", swRegistration.scope);
 
       // Listen for notification action messages from Service Worker
@@ -3211,8 +3245,8 @@ function triggerLiveSystemNotification({ title, body, tag = 'dose-alarm', data =
   if (swRegistration && swRegistration.showNotification) {
     swRegistration.showNotification(title, {
       body: body,
-      icon: '/static/carebridge_bg.jpg',
-      badge: '/static/carebridge_bg.jpg',
+      icon: 'carebridge_bg.jpg',
+      badge: 'carebridge_bg.jpg',
       tag: tag,
       requireInteraction: true,
       vibrate: [300, 150, 300, 150, 500],
@@ -3229,7 +3263,7 @@ function triggerLiveSystemNotification({ title, body, tag = 'dose-alarm', data =
   if ('Notification' in window && Notification.permission === 'granted') {
     new Notification(title, {
       body: body,
-      icon: '/static/carebridge_bg.jpg',
+      icon: 'carebridge_bg.jpg',
       tag: tag,
       requireInteraction: true
     });

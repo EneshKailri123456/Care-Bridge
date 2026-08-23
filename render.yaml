@@ -1,15 +1,11 @@
 services:
   - type: web
-    name: carebridge-api
-    runtime: python
-    plan: free
+    name: care-bridge-api
+    env: python
     region: oregon
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python -m uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: PYTHONPATH
-        value: ./backend
-      - key: OPENROUTER_API_KEY
-        sync: false
-      - key: HF_TOKEN
-        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.9

@@ -26,7 +26,8 @@ class DocumentExtractor:
             if sample["id"] in normalized or any(
                 med.name.lower() in normalized for med in sample["data"].medications[:2]
             ):
-                doc_copy = sample["data"].model_copy(deep=True)
+                doc_data = sample["data"]
+                doc_copy = doc_data.model_copy(deep=True) if hasattr(doc_data, "model_copy") else doc_data.copy(deep=True)
                 doc_copy.raw_ocr_text = text[:1000]
                 doc_copy.confidence_notes = "Extracted & Verified with NVIDIA Nemotron 3 Ultra + Pharmacological KB"
                 return doc_copy
@@ -219,6 +220,7 @@ class DocumentExtractor:
     @classmethod
     def extract_from_sample(cls, sample_id: str) -> MedicalDocument:
         sample = get_sample_by_id(sample_id)
-        doc = sample["data"].model_copy(deep=True)
+        doc_data = sample["data"]
+        doc = doc_data.model_copy(deep=True) if hasattr(doc_data, "model_copy") else doc_data.copy(deep=True)
         doc.confidence_notes = "⚡ Verified with NVIDIA Nemotron 3 Ultra + Pharmacological KB"
         return doc
