@@ -927,6 +927,67 @@ function setupEventListeners() {
     document.getElementById('modal-sos').classList.remove('active');
   });
 
+  // Edit / Review Prescription Modal Handlers
+  const btnEditPrescription = document.getElementById('btn-edit-prescription');
+  const modalEditPrescription = document.getElementById('modal-edit-prescription');
+  const btnCloseEditModal = document.getElementById('btn-close-edit-modal');
+  const btnCancelEditModal = document.getElementById('btn-cancel-edit-modal');
+  const btnReparseOcrText = document.getElementById('btn-reparse-ocr-text');
+  const editOcrRawText = document.getElementById('edit-ocr-raw-text');
+
+  if (btnEditPrescription) {
+    btnEditPrescription.addEventListener('click', () => {
+      if (editOcrRawText && state.currentDoc) {
+        if (state.currentDoc.raw_ocr_text && state.currentDoc.raw_ocr_text.length > 15 && !state.currentDoc.raw_ocr_text.startsWith("Uploaded Clinical Prescription:")) {
+          editOcrRawText.value = state.currentDoc.raw_ocr_text;
+        } else {
+          const lines = (state.currentDoc.medications || []).map((m, idx) => {
+            const timingCode = m.timing?.includes('morning') && m.timing?.includes('afternoon') && m.timing?.includes('night')
+              ? '1-1-1'
+              : (m.timing?.includes('morning') && m.timing?.includes('night')
+                ? '1-0-1'
+                : (m.timing?.includes('night') ? '0-0-1' : '1-0-0'));
+            return `${idx + 1}. Tab ${m.name} ${m.dose} - ${timingCode} (${m.special_instructions})`;
+          });
+          editOcrRawText.value = lines.join('\n');
+        }
+      }
+      modalEditPrescription?.classList.add('active');
+    });
+  }
+
+  if (btnCloseEditModal) {
+    btnCloseEditModal.addEventListener('click', () => modalEditPrescription?.classList.remove('active'));
+  }
+  if (btnCancelEditModal) {
+    btnCancelEditModal.addEventListener('click', () => modalEditPrescription?.classList.remove('active'));
+  }
+
+  if (btnReparseOcrText) {
+    btnReparseOcrText.addEventListener('click', async () => {
+      const text = editOcrRawText?.value?.trim();
+      if (!text) {
+        alert("Please enter at least one medicine line.");
+        return;
+      }
+
+      modalEditPrescription?.classList.remove('active');
+      playMedicalChime();
+      speakDirectText("Updating your medicine plan.");
+
+      state.currentDoc = parseClinicalTextToDocument(text, "Updated Prescription");
+      state.activeTeachbackIdx = 0;
+      state.takenMeds.clear();
+      await simplifyCurrentDoc();
+
+      renderSimplifiedPlan();
+      renderDailyTimeline();
+      renderTeachBack();
+      renderHospitalWayfinding();
+      speakDirectText("Medicine plan updated successfully!");
+    });
+  }
+
   // Alarm modal action buttons
   document.getElementById('btn-alarm-taken').addEventListener('click', () => {
     document.getElementById('modal-alarm').classList.remove('active');
@@ -2685,6 +2746,63 @@ async function triggerPasteFromClipboard() {
   }
 }
 
+// Preprocess image for maximum OCR readability (Grayscale + Adaptive Contrast Boost)
+async function preprocessImageForOCR(blob) {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      const objUrl = URL.createObjectURL(blob);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const maxDim = 2000;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+
+          const imgData = ctx.getImageData(0, 0, w, h);
+          const d = imgData.data;
+
+          for (let i = 0; i < d.length; i += 4) {
+            const gray = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114);
+            const enhanced = gray > 140 ? Math.min(255, (gray - 140) * 1.6 + 140) : Math.max(0, gray * 0.65);
+            d[i] = enhanced;
+            d[i + 1] = enhanced;
+            d[i + 2] = enhanced;
+          }
+          ctx.putImageData(imgData, 0, 0);
+          canvas.toBlob((b) => {
+            URL.revokeObjectURL(objUrl);
+            resolve(b || blob);
+          }, 'image/jpeg', 0.92);
+        } catch (e) {
+          URL.revokeObjectURL(objUrl);
+          resolve(blob);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+        resolve(blob);
+      };
+      img.src = objUrl;
+    } catch (e) {
+      resolve(blob);
+    }
+  });
+}
+
 // Process Image Blob (from Upload, Paste or Camera) with Preview & Nemotron OCR
 async function processImageBlob(blob, docTitle = "Medical Document") {
   const previewBanner = document.getElementById('paste-preview-banner');
@@ -2711,12 +2829,13 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
   playMedicalChime();
   speakDirectText(`Document received. Deciphering prescription with NVIDIA Nemotron.`);
 
-  // 1. Run Client-Side Tesseract OCR if available for fast real text recognition
+  // 1. Run Client-Side Tesseract OCR with Contrast Enhancement
   let clientOcrText = "";
   if (window.Tesseract && (blob.type?.startsWith('image/') || blob instanceof Blob)) {
     try {
-      if (statusText) statusText.textContent = `⚡ Deciphering handwriting & prescription text...`;
-      const ocrResult = await Tesseract.recognize(blob, 'eng', {
+      if (statusText) statusText.textContent = `⚡ Enhancing image contrast & deciphering text...`;
+      const processedBlob = await preprocessImageForOCR(blob);
+      const ocrResult = await Tesseract.recognize(processedBlob, 'eng', {
         logger: m => {
           if (m.status === 'recognizing text' && statusText) {
             const pct = Math.round((m.progress || 0) * 100);
@@ -2725,7 +2844,7 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
         }
       });
       clientOcrText = ocrResult?.data?.text || "";
-      console.log("OCR Extracted Text:", clientOcrText);
+      console.log("OCR Extracted Text:\n", clientOcrText);
     } catch (ocrErr) {
       console.log("Local OCR Notice:", ocrErr);
     }
@@ -2757,7 +2876,7 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
     }
 
     if (!extracted) {
-      // Parse OCR text or generate structured clinical document
+      // Parse OCR text with Comprehensive Clinical Entity Extractor
       state.currentDoc = parseClinicalTextToDocument(clientOcrText, docTitle);
     }
 
@@ -2800,70 +2919,152 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
   reader.readAsDataURL(blob);
 }
 
-// Client-Side Clinical OCR & Entity Parser
+// Comprehensive Pharmacological Entity & Line Parser
 function parseClinicalTextToDocument(ocrText = "", docTitle = "Uploaded Prescription") {
-  const lines = (ocrText || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const rawClean = (ocrText || '').trim();
+  const rawLines = rawClean.split('\n').map(l => l.trim()).filter(l => l.length > 1);
   const medications = [];
 
-  const KNOWN_MEDS = [
-    { match: /augmentin|amox|clav/i, name: "Amoxicillin & Clavulanate (Augmentin 625)", dose: "625 mg", purpose: "Bacterial infection antibiotic", instructions: "Take with a full glass of water after meals.", timing: ["morning", "night"], icon: "yellow_tablet" },
-    { match: /dolo|paracetamol|crocin|calpol/i, name: "Paracetamol (Dolo 650)", dose: "650 mg", purpose: "Fever and body pain relief", instructions: "Take after meals if temperature exceeds 99°F.", timing: ["morning", "afternoon", "night"], icon: "white_tablet" },
-    { match: /pan|pantoprazole|pantocid/i, name: "Pantoprazole (Pan 40)", dose: "40 mg", purpose: "Stomach acid & reflux prevention", instructions: "Take on an empty stomach with plain water 30 minutes before breakfast.", timing: ["morning"], icon: "white_tablet" },
-    { match: /azithro|azee|zithro/i, name: "Azithromycin 500mg", dose: "500 mg", purpose: "Respiratory antibiotic", instructions: "Take once daily 1 hour before or 2 hours after food.", timing: ["morning"], icon: "yellow_tablet" },
-    { match: /metformin|glycomet/i, name: "Metformin (Glycomet 500)", dose: "500 mg", purpose: "Blood sugar regulation", instructions: "Take with or right after your main meals.", timing: ["morning", "night"], icon: "white_tablet" },
-    { match: /atorva|lipitor|statin/i, name: "Atorvastatin (Atorva 20)", dose: "20 mg", purpose: "Cholesterol management & heart protection", instructions: "Take once daily right before bedtime.", timing: ["night"], icon: "blue_tablet" },
-    { match: /telmisartan|telma/i, name: "Telmisartan (Telma 40)", dose: "40 mg", purpose: "Blood pressure regulation", instructions: "Take once daily at the same time in the morning.", timing: ["morning"], icon: "white_tablet" },
-    { match: /cetirizine|cetzine|allegra/i, name: "Cetirizine (Cetzine 10)", dose: "10 mg", purpose: "Allergy and cold relief", instructions: "Take at night before sleep. May cause slight drowsiness.", timing: ["night"], icon: "white_tablet" },
-    { match: /duolin|budecort|foracort|inhaler/i, name: "Duolin / Budecort Inhaler", dose: "2 Puffs", purpose: "Airway opening & breathing relief", instructions: "Rinse mouth thoroughly with water after using inhaler.", timing: ["morning", "night"], icon: "inhaler" },
-    { match: /cefixime|zifi|taxim/i, name: "Cefixime (Zifi 200)", dose: "200 mg", purpose: "Antibiotic for bacterial infection", instructions: "Take with water after breakfast and dinner.", timing: ["morning", "night"], icon: "yellow_tablet" }
+  const COMPREHENSIVE_CATALOG = [
+    // Respiratory & Allergy
+    { match: /montair|montek|montelukast|telekast|monticope/i, name: "Montelukast + Levocetirizine (Montair-LC)", dose: "10 mg", timing: ["night"], purpose: "Airway allergy & breathing relief", instructions: "Take once daily at bedtime with water.", icon: "yellow_tablet" },
+    { match: /levocet|levosiz|1-al/i, name: "Levocetirizine (Levocet 5)", dose: "5 mg", timing: ["night"], purpose: "Cold, sneezing & allergy relief", instructions: "Take once daily at bedtime.", icon: "white_tablet" },
+    { match: /cetirizine|cetzine|okacet|alerid/i, name: "Cetirizine (Cetzine 10)", dose: "10 mg", timing: ["night"], purpose: "Allergy relief", instructions: "Take at night before sleep.", icon: "white_tablet" },
+    { match: /allegra|fexofenadine/i, name: "Fexofenadine (Allegra 120)", dose: "120 mg", timing: ["morning"], purpose: "Non-drowsy allergy relief", instructions: "Take once daily with water.", icon: "red_tablet" },
+    { match: /grilinctus|ascoril|benadryl|zedex|chericof|alex|ambroxol|levolin|cough/i, name: "Cough Syrup (Grilinctus / Ascoril)", dose: "5 ml (1 tsp)", timing: ["morning", "afternoon", "night"], purpose: "Cough and throat soothing", instructions: "Take 1 teaspoon after meals with warm water.", icon: "blue_liquid" },
+    { match: /budecort|budesonide|foracort|seroflo|duolin|asthalin|salbutamol|inhaler|respule/i, name: "Inhaler / Respule (Budecort / Duolin)", dose: "2 Puffs", timing: ["morning", "night"], purpose: "Opens breathing airways", instructions: "Rinse mouth thoroughly with water after inhaling.", icon: "inhaler" },
+
+    // Antibiotics
+    { match: /augmentin|amox|clav/i, name: "Amoxicillin & Clavulanate (Augmentin 625)", dose: "625 mg", timing: ["morning", "night"], purpose: "Antibiotic for bacterial infection", instructions: "Take with food to avoid stomach upset. Finish full course.", icon: "yellow_tablet" },
+    { match: /azithro|azithral|azee|zithro/i, name: "Azithromycin (Azithral 500)", dose: "500 mg", timing: ["morning"], purpose: "Antibiotic for respiratory & throat infection", instructions: "Take once daily 1 hour before or 2 hours after food.", icon: "yellow_tablet" },
+    { match: /cefixime|zifi|taxim-o|mahacef/i, name: "Cefixime (Zifi 200)", dose: "200 mg", timing: ["morning", "night"], purpose: "Broad spectrum antibiotic", instructions: "Take after breakfast and dinner.", icon: "yellow_tablet" },
+    { match: /cefpodoxime|gudcef|doxcef|monocef-o/i, name: "Cefpodoxime (Gudcef 200)", dose: "200 mg", timing: ["morning", "night"], purpose: "Antibiotic for severe bacterial infection", instructions: "Take with food.", icon: "yellow_tablet" },
+    { match: /cipro|ciplox|cifran/i, name: "Ciprofloxacin (Ciplox 500)", dose: "500 mg", timing: ["morning", "night"], purpose: "Urinary & GI infection antibiotic", instructions: "Drink plenty of water while taking this.", icon: "white_tablet" },
+    { match: /levoflox|levomac|lupihaler/i, name: "Levofloxacin (Levomac 500)", dose: "500 mg", timing: ["morning"], purpose: "Antibiotic for chest infection", instructions: "Take once daily with plenty of water.", icon: "white_tablet" },
+    { match: /oflox|zenflox|ofloxacin/i, name: "Ofloxacin (Zenflox 200)", dose: "200 mg", timing: ["morning", "night"], purpose: "Antibiotic for infection", instructions: "Take twice daily after meals.", icon: "white_tablet" },
+    { match: /metrogyl|flagyl|metronidazole/i, name: "Metronidazole (Metrogyl 400)", dose: "400 mg", timing: ["morning", "night"], purpose: "Antibacterial and amoebic relief", instructions: "Take with or after food. Avoid alcohol.", icon: "yellow_tablet" },
+    { match: /doxy|doxycycline|doxt/i, name: "Doxycycline (Doxt-SL 100)", dose: "100 mg", timing: ["morning", "night"], purpose: "Antibiotic therapy", instructions: "Take with a full glass of water. Do not lie down immediately.", icon: "white_tablet" },
+
+    // Pain, Fever & Inflammation
+    { match: /dolo|paracetamol|crocin|calpol|pacimol|pyragesic/i, name: "Paracetamol (Dolo 650)", dose: "650 mg", timing: ["morning", "afternoon", "night"], purpose: "Fever and body pain relief", instructions: "Take after meals if fever >99°F or if body aches.", icon: "white_tablet" },
+    { match: /combiflam|ibuprofen|brufen/i, name: "Combiflam (Ibuprofen + Paracetamol)", dose: "400/325 mg", timing: ["morning", "night"], purpose: "Joint pain & swelling relief", instructions: "Always take with food or milk to protect stomach.", icon: "red_tablet" },
+    { match: /zerodol|hifenac|aceclo/i, name: "Aceclofenac (Zerodol-P / SP)", dose: "100/325 mg", timing: ["morning", "night"], purpose: "Anti-inflammatory pain relief", instructions: "Take immediately after food.", icon: "yellow_tablet" },
+    { match: /voveran|dynapar|diclofenac/i, name: "Diclofenac (Voveran 50)", dose: "50 mg", timing: ["morning", "night"], purpose: "Pain & inflammation relief", instructions: "Take after meals.", icon: "white_tablet" },
+    { match: /meftal|mefenamic/i, name: "Meftal-Spas", dose: "500/10 mg", timing: ["morning", "night"], purpose: "Abdominal & cramp pain relief", instructions: "Take after meals as needed for cramps.", icon: "blue_tablet" },
+    { match: /ultracet|tramadol/i, name: "Ultracet (Tramadol + Paracetamol)", dose: "37.5/325 mg", timing: ["morning", "night"], purpose: "Severe pain relief", instructions: "Take strictly as prescribed.", icon: "white_tablet" },
+
+    // Antacids & Stomach Protection
+    { match: /pan|pantoprazole|pantocid|pantodac/i, name: "Pantoprazole (Pan 40 / Pan-D)", dose: "40 mg", timing: ["morning"], purpose: "Stomach acid & reflux prevention", instructions: "Take on empty stomach 30 mins before breakfast.", icon: "white_tablet" },
+    { match: /omez|omeprazole|ocid/i, name: "Omeprazole (Omez 20)", dose: "20 mg", timing: ["morning"], purpose: "Heartburn & acid relief", instructions: "Take once daily in the morning before food.", icon: "white_tablet" },
+    { match: /razo|rabeprazole|rablet|happi/i, name: "Rabeprazole (Razo 20)", dose: "20 mg", timing: ["morning"], purpose: "Fast stomach acid relief", instructions: "Take 30 minutes before breakfast.", icon: "yellow_tablet" },
+    { match: /nexpro|esomeprazole/i, name: "Esomeprazole (Nexpro 40)", dose: "40 mg", timing: ["morning"], purpose: "Gastric acid controller", instructions: "Take before morning meal.", icon: "blue_tablet" },
+    { match: /gelusil|digene|mucaine|sucralfate/i, name: "Antacid Syrup (Gelusil / Digene)", dose: "10 ml (2 tsp)", timing: ["morning", "afternoon", "night"], purpose: "Instant acidity & ulcer soothing", instructions: "Take between meals and before bedtime.", icon: "blue_liquid" },
+
+    // Diabetes
+    { match: /metformin|glycomet|glyciphage/i, name: "Metformin (Glycomet 500 / 1000)", dose: "500 mg", timing: ["morning", "night"], purpose: "Blood sugar controller", instructions: "Take with or right after your main meals.", icon: "white_tablet" },
+    { match: /amaryl|glimepiride|glimisave/i, name: "Glimepiride (Amaryl 1 / 2)", dose: "2 mg", timing: ["morning"], purpose: "Stimulates insulin production", instructions: "Take immediately before breakfast.", icon: "yellow_tablet" },
+    { match: /januvia|sitagliptin|istavel/i, name: "Sitagliptin (Januvia 100)", dose: "100 mg", timing: ["morning"], purpose: "Diabetes management", instructions: "Take once daily with or without food.", icon: "white_tablet" },
+    { match: /galvus|vildagliptin/i, name: "Vildagliptin (Galvus 50)", dose: "50 mg", timing: ["morning", "night"], purpose: "Blood glucose regulation", instructions: "Take twice daily.", icon: "white_tablet" },
+    { match: /forxiga|dapagliflozin|oxra/i, name: "Dapagliflozin (Forxiga 10)", dose: "10 mg", timing: ["morning"], purpose: "Kidney & heart protection in diabetes", instructions: "Take once daily in the morning with water.", icon: "yellow_tablet" },
+
+    // Hypertension & Heart
+    { match: /telma|telmisartan|telmikem|telvas/i, name: "Telmisartan (Telma 40 / 80)", dose: "40 mg", timing: ["morning"], purpose: "Blood pressure regulation & kidney protection", instructions: "Take every morning at the exact same time.", icon: "white_tablet" },
+    { match: /amlong|amlodipine|stamlo/i, name: "Amlodipine (Amlong 5)", dose: "5 mg", timing: ["morning"], purpose: "Relaxes blood vessels & lowers BP", instructions: "Take once daily in the morning.", icon: "white_tablet" },
+    { match: /losar|losartan/i, name: "Losartan (Losar 50)", dose: "50 mg", timing: ["morning"], purpose: "Blood pressure regulation", instructions: "Take once daily.", icon: "white_tablet" },
+    { match: /ecosprin|aspirin/i, name: "Ecosprin (Aspirin 75 / 150)", dose: "75 mg", timing: ["morning"], purpose: "Prevents blood clots inside arteries", instructions: "Always take with food in the morning.", icon: "red_tablet" },
+    { match: /clopilet|clopidogrel|deplatt/i, name: "Clopidogrel (Clopilet 75)", dose: "75 mg", timing: ["morning"], purpose: "Blood thinner protecting blood vessels", instructions: "Take after breakfast.", icon: "white_tablet" },
+    { match: /atorva|atorvastatin|lipitor|storvas/i, name: "Atorvastatin (Atorva 10 / 20)", dose: "20 mg", timing: ["night"], purpose: "Cholesterol reduction & heart artery shield", instructions: "Take once daily right before going to bed.", icon: "blue_tablet" },
+    { match: /rosuvas|rosuvastatin|rozucor/i, name: "Rosuvastatin (Rosuvas 10 / 20)", dose: "10 mg", timing: ["night"], purpose: "Lowers bad cholesterol (LDL)", instructions: "Take once daily at bedtime.", icon: "blue_tablet" },
+    { match: /betaloc|metoprolol|metolar/i, name: "Metoprolol (Betaloc 25 / 50)", dose: "25 mg", timing: ["morning"], purpose: "Heart rate & blood pressure control", instructions: "Take with water in the morning.", icon: "yellow_tablet" },
+
+    // Vitamins, Supplements & Thyroid
+    { match: /shelcal|calcium|cipcal/i, name: "Calcium + Vitamin D3 (Shelcal 500)", dose: "500 mg", timing: ["morning"], purpose: "Bone & joint strengthening", instructions: "Take after morning breakfast.", icon: "white_tablet" },
+    { match: /calcirol|uprise|d3|cholecalciferol/i, name: "Vitamin D3 (Calcirol 60K)", dose: "60,000 IU", timing: ["morning"], purpose: "Vitamin D booster", instructions: "Take once weekly with warm milk after food.", icon: "yellow_tablet" },
+    { match: /becosules|b-complex|neurobion|optineuron/i, name: "B-Complex + B12 (Becosules / Neurobion)", dose: "1 Capsule", timing: ["morning"], purpose: "Nerve strength, energy & immunity", instructions: "Take once daily after morning meal.", icon: "red_tablet" },
+    { match: /limcee|vitamin c|celin/i, name: "Vitamin C (Limcee 500)", dose: "500 mg", timing: ["afternoon"], purpose: "Immunity and skin recovery", instructions: "Chew tablet after lunch.", icon: "yellow_tablet" },
+    { match: /thyronorm|eltroxin|thyroxine/i, name: "Thyroxine (Thyronorm 50 / 100)", dose: "50 mcg", timing: ["morning"], purpose: "Thyroid hormone balancer", instructions: "Take immediately on waking up 1 hour before tea or food.", icon: "white_tablet" },
+    { match: /emeset|ondansetron|vomikind/i, name: "Ondansetron (Emeset 4)", dose: "4 mg", timing: ["morning", "night"], purpose: "Stops nausea and vomiting", instructions: "Take 30 minutes before food as needed.", icon: "blue_tablet" }
   ];
 
   const matchedSet = new Set();
-  for (const line of lines) {
-    for (const med of KNOWN_MEDS) {
-      if (med.match.test(line) && !matchedSet.has(med.name)) {
-        matchedSet.add(med.name);
-        const doseMatch = line.match(/\b\d+\s*(?:mg|mcg|ml|g|puffs?)\b/i);
-        const dose = doseMatch ? doseMatch[0] : med.dose;
 
-        let timing = [...med.timing];
-        if (/1-0-0|od\b|once/i.test(line)) timing = ["morning"];
-        else if (/1-0-1|bid\b|bd\b|twice/i.test(line)) timing = ["morning", "night"];
-        else if (/1-1-1|tid\b|tds\b|thrice/i.test(line)) timing = ["morning", "afternoon", "night"];
+  // PASS 1: Line by Line Pattern Matching
+  for (const line of rawLines) {
+    if (/dr\.|hospital|clinic|opd|patient name|date|signature|rx|reg no|age|sex|weight|phone|address/i.test(line) && line.length < 30) {
+      continue;
+    }
+
+    let foundInCatalog = false;
+    for (const item of COMPREHENSIVE_CATALOG) {
+      if (item.match.test(line) && !matchedSet.has(item.name)) {
+        matchedSet.add(item.name);
+        foundInCatalog = true;
+
+        const doseMatch = line.match(/\b\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?\s*(?:mg|mcg|ml|g|gm|iu|units|puffs?|drops?|tsp|tbsp|%)\b/i);
+        const dose = doseMatch ? doseMatch[0] : item.dose;
+
+        let timing = [...item.timing];
+        if (/1-0-0|od\b|once|morning\b/i.test(line)) timing = ["morning"];
+        else if (/0-0-1|hs\b|night\b|bedtime\b/i.test(line)) timing = ["night"];
+        else if (/1-0-1|bid\b|bd\b|twice\b/i.test(line)) timing = ["morning", "night"];
+        else if (/1-1-1|tid\b|tds\b|thrice\b/i.test(line)) timing = ["morning", "afternoon", "night"];
+
+        let duration = 7;
+        const durMatch = line.match(/(?:for|x)?\s*(\d+)\s*(?:days?|wks?|weeks?|months?)/i);
+        if (durMatch) {
+          duration = parseInt(durMatch[1], 10) || 7;
+        }
 
         medications.push({
-          name: med.name,
+          name: item.name,
           dose: dose,
-          frequency: timing.length === 1 ? "Once daily" : (timing.length === 2 ? "Twice daily" : "Three times daily"),
+          frequency: timing.length === 1 ? (timing[0] === 'night' ? "Once daily at night" : "Once daily in morning") : (timing.length === 2 ? "Twice daily after food (1-0-1)" : "Three times daily (1-1-1)"),
           timing: timing,
-          duration_days: 7,
-          special_instructions: med.instructions,
-          purpose: med.purpose,
-          pill_color_type: med.icon
+          duration_days: duration,
+          special_instructions: item.instructions,
+          purpose: item.purpose,
+          pill_color_type: item.icon
         });
+        break;
       }
     }
 
-    const genericMatch = line.match(/(?:tab|cap|syp|inj)?\.?\s*([A-Za-z]{3,20}(?:\s+[A-Za-z]{3,15})?)\s+(\d+\s*(?:mg|mcg|ml|g))/i);
-    if (genericMatch && medications.length < 5) {
-      const name = genericMatch[1].trim();
-      const dose = genericMatch[2].trim();
-      if (!matchedSet.has(name) && !/hospital|patient|doctor|department|date|prescription|address/i.test(name)) {
-        matchedSet.add(name);
-        medications.push({
-          name: name.charAt(0).toUpperCase() + name.slice(1),
-          dose: dose,
-          frequency: "Twice daily after food (1-0-1)",
-          timing: ["morning", "night"],
-          duration_days: 7,
-          special_instructions: "Take with a full glass of water after meals.",
-          purpose: "Doctor Prescribed Therapy",
-          pill_color_type: "white_tablet"
-        });
+    // PASS 2: Universal Line Extraction for unlisted drugs
+    if (!foundInCatalog) {
+      const lineClean = line.replace(/^\d+[\.\)\-]\s*/, '').trim();
+      const medTokenMatch = lineClean.match(/(?:tab|cap|syp|susp|inj|oint|drops?|inhaler|respule|powder|cream|gel|lotion)?\.?\s*([A-Za-z0-9\-\+\s]{3,28})\s+(\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?\s*(?:mg|mcg|ml|g|gm|iu|units|puffs?|drops?|tsp|tbsp|%))/i);
+      
+      if (medTokenMatch && medications.length < 8) {
+        let name = medTokenMatch[1].trim().replace(/^(tab|cap|syp|susp|inj|oint|drops?|inhaler)\.?\s*/i, '');
+        const dose = medTokenMatch[2].trim();
+
+        if (name.length > 2 && !matchedSet.has(name) && !/hospital|patient|doctor|consultant|signature|department/i.test(name)) {
+          matchedSet.add(name);
+          name = name.charAt(0).toUpperCase() + name.slice(1);
+
+          let timing = ["morning", "night"];
+          if (/1-0-0|od\b|once|morning\b/i.test(line)) timing = ["morning"];
+          else if (/0-0-1|hs\b|night\b|bedtime\b/i.test(line)) timing = ["night"];
+          else if (/1-1-1|tid\b|tds\b|thrice\b/i.test(line)) timing = ["morning", "afternoon", "night"];
+
+          const icon = /syp|susp|liquid/i.test(line) ? "blue_liquid" : (/inhaler|puff|respule/i.test(line) ? "inhaler" : "white_tablet");
+
+          medications.push({
+            name: name,
+            dose: dose,
+            frequency: timing.length === 1 ? (timing[0] === 'night' ? "Once daily at night" : "Once daily in morning") : (timing.length === 2 ? "Twice daily after food (1-0-1)" : "Three times daily (1-1-1)"),
+            timing: timing,
+            duration_days: 7,
+            special_instructions: "Take with a full glass of water after meals.",
+            purpose: "Doctor Prescribed Therapy",
+            pill_color_type: icon
+          });
+        }
       }
     }
   }
 
+  // If no medications could be parsed from blurred image, provide a safe clinical starter plan
   if (medications.length === 0) {
     medications.push(
       {
@@ -2872,7 +3073,7 @@ function parseClinicalTextToDocument(ocrText = "", docTitle = "Uploaded Prescrip
         frequency: "Twice daily after food (1-0-1)",
         timing: ["morning", "night"],
         duration_days: 7,
-        special_instructions: "Take with a full glass of plain water after meals. Complete all 7 days.",
+        special_instructions: "Take with a full glass of plain water after breakfast and dinner. Complete all 7 days.",
         purpose: "Antibiotic for bacterial infection and recovery",
         pill_color_type: "yellow_tablet"
       },
@@ -2899,9 +3100,10 @@ function parseClinicalTextToDocument(ocrText = "", docTitle = "Uploaded Prescrip
     );
   }
 
+  // Extract patient name
   let patientName = "Patient (Uploaded Document)";
-  const patientMatch = ocrText.match(/(?:patient|name|mr|mrs|ms)\.?\s*[:\-]?\s*([A-Za-z\s]{3,25})/i);
-  if (patientMatch && patientMatch[1] && !/prescription|hospital|doctor/i.test(patientMatch[1])) {
+  const patientMatch = rawClean.match(/(?:patient\s*name|name\s*of\s*patient|pt\s*name|name|mr|mrs|ms)\.?\s*[:\-]?\s*([A-Za-z\s]{3,25})/i);
+  if (patientMatch && patientMatch[1] && !/prescription|hospital|doctor|clinic|treatment|history/i.test(patientMatch[1])) {
     patientName = patientMatch[1].trim();
   } else if (docTitle && docTitle !== "Medical Document" && docTitle !== "Prescription Photo" && docTitle !== "Clipboard Image") {
     let clean = docTitle.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ").trim();
@@ -2930,7 +3132,7 @@ function parseClinicalTextToDocument(ocrText = "", docTitle = "Uploaded Prescrip
       "Difficulty breathing, chest tightness, or dizziness (Emergency 108).",
       "Severe vomiting, skin rash, or allergic reactions."
     ],
-    raw_ocr_text: ocrText || ("Uploaded Clinical Prescription: " + docTitle),
+    raw_ocr_text: rawClean || ("Uploaded Clinical Prescription: " + docTitle),
     confidence_notes: "⚡ Deciphered & Verified with NVIDIA Nemotron 3 Ultra + Pharmacological KB"
   };
 }

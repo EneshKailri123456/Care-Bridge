@@ -224,11 +224,16 @@
         <div class="grid-col-right">
           <!-- Simplified Medications List -->
           <div class="card">
-            <div class="card-title-row">
-              <h3 class="card-title"><span>💊</span> <span id="txt-med-list-title">Medicines & Instructions</span></h3>
-              <button id="btn-go-to-timeline" class="btn-mini-listen" style="background: var(--primary); color: white;">
-                ⏰ View Daily Timeline
-              </button>
+            <div class="card-title-row" style="flex-wrap: wrap; gap: 8px;">
+              <h3 class="card-title" style="margin-right: auto;"><span>💊</span> <span id="txt-med-list-title">Medicines & Instructions</span></h3>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button id="btn-edit-prescription" class="btn-mini-listen" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: var(--text-main);" title="Review and edit scanned prescription text">
+                  ✏️ Edit / Review
+                </button>
+                <button id="btn-go-to-timeline" class="btn-mini-listen" style="background: var(--primary); color: white;">
+                  ⏰ Daily Timeline
+                </button>
+              </div>
             </div>
             <div id="simplified-meds-container" class="meds-list-container">
               <!-- Injected via JavaScript -->
@@ -730,6 +735,37 @@
       <button id="btn-dismiss-install-modal" class="btn-modal-dismiss" style="width: 100%;">
         Done
       </button>
+    </div>
+  </div>
+
+  <!-- Modal: Edit / Review Scanned Prescription -->
+  <div id="modal-edit-prescription" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--primary);">✏️ Review & Edit Extracted Prescription</h3>
+        <button id="btn-close-edit-modal" class="btn-icon" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+        <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+          Review the recognized prescription lines below. You can edit, add medicines, or paste doctor notes to update your plan and daily schedule instantly.
+        </p>
+
+        <div>
+          <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px; display: block;">
+            📄 Recognized Prescription Lines & Doctor Notes:
+          </label>
+          <textarea id="edit-ocr-raw-text" rows="6" style="width: 100%; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 12px; font-family: monospace; font-size: 0.88rem; resize: vertical;" placeholder="e.g.&#10;1. Tab Montair-LC 10mg - 0-0-1 after dinner&#10;2. Tab Dolo 650mg - 1-0-1 after food for 3 days&#10;3. Syp Grilinctus 5ml - TDS after food"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" id="btn-reparse-ocr-text" class="btn-cta-coral" style="flex: 1; padding: 10px 14px; font-size: 0.9rem;">
+            ⚡ Update Medicine Plan
+          </button>
+          <button type="button" id="btn-cancel-edit-modal" class="btn-modal-dismiss" style="padding: 10px 16px;">
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
