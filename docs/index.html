@@ -142,11 +142,17 @@
             </div>
 
             <!-- Pasted Image Processing Banner -->
-            <div id="paste-preview-banner" class="paste-preview-card" style="display: none;">
-              <img id="paste-thumbnail" src="" alt="Pasted Prescription Preview" class="paste-thumb-img">
-              <div style="text-align: left; flex: 1;">
-                <div style="font-weight: 800; font-size: 0.95rem;" id="paste-status-text">⚡ Extracting Medical Information...</div>
-                <div style="font-size: 0.8rem; opacity: 0.85;">Pharmacological Drug Resolver & Schema Normalizer</div>
+            <div id="paste-preview-banner" class="paste-preview-card" style="display: none; flex-direction: column; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                <img id="paste-thumbnail" src="" alt="Pasted Prescription Preview" class="paste-thumb-img">
+                <div style="text-align: left; flex: 1;">
+                  <div style="font-weight: 800; font-size: 0.95rem; color: #facc15;" id="paste-status-text">⚡ Scanning with NVIDIA Nemotron Vision OCR...</div>
+                  <div style="font-size: 0.8rem; opacity: 0.85;" id="paste-status-sub">Please wait while optical character recognition deciphers the text...</div>
+                </div>
+              </div>
+              <!-- Live Scanning Progress Bar -->
+              <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 4px; overflow: hidden;">
+                <div id="ocr-progress-bar" style="width: 20%; height: 100%; background: linear-gradient(90deg, #ea580c, #facc15); transition: width 0.3s ease;"></div>
               </div>
             </div>
           </div>

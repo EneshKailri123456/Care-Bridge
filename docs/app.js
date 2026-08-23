@@ -2884,14 +2884,15 @@ async function preprocessImageForOCR(blob) {
   });
 }
 
-// Process Image Blob (from Upload, Paste or Camera) with Preview & Nemotron OCR
+// Process Image Blob (from Upload, Paste or Camera) with Sequential Progress & Nemotron OCR
 async function processImageBlob(blob, docTitle = "Medical Document") {
   const previewBanner = document.getElementById('paste-preview-banner');
   const thumbnail = document.getElementById('paste-thumbnail');
   const statusText = document.getElementById('paste-status-text');
+  const statusSub = document.getElementById('paste-status-sub');
+  const progressBar = document.getElementById('ocr-progress-bar');
 
   let objectUrl = null;
-  // Display preview thumbnail immediately if it is an image
   if (blob.type && blob.type.startsWith('image/')) {
     objectUrl = URL.createObjectURL(blob);
     if (thumbnail) {
@@ -2905,22 +2906,40 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
   state.currentUploadedImageUrl = objectUrl;
 
   if (previewBanner) previewBanner.style.display = 'flex';
+  if (progressBar) progressBar.style.width = '15%';
   if (statusText) statusText.textContent = `⚡ Scanning ${docTitle} with NVIDIA Nemotron Vision OCR...`;
+  if (statusSub) statusSub.textContent = "Step 1 of 3: Optimizing image contrast & resolution...";
 
   playMedicalChime();
   speakDirectText(`Document received. Deciphering prescription with NVIDIA Nemotron.`);
 
-  // 1. Run Client-Side Tesseract OCR with Contrast Enhancement
+  // Step 1: Convert to Base64
+  const base64Data = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(blob);
+  });
+
+  // Step 2: Preprocess Image for OCR
+  if (progressBar) progressBar.style.width = '35%';
+  if (statusSub) statusSub.textContent = "Step 2 of 3: Enhancing handwriting lines...";
+  const processedBlob = await preprocessImageForOCR(blob);
+
+  // Step 3: Run Optical Character Recognition
+  if (progressBar) progressBar.style.width = '55%';
+  if (statusText) statusText.textContent = `⚡ Deciphering Prescription Handwriting...`;
+  if (statusSub) statusSub.textContent = "Step 3 of 3: Reading medicines, dosages and doctor timings...";
+
   let clientOcrText = "";
-  if (window.Tesseract && (blob.type?.startsWith('image/') || blob instanceof Blob)) {
+  if (window.Tesseract) {
     try {
-      if (statusText) statusText.textContent = `⚡ Enhancing image contrast & deciphering text...`;
-      const processedBlob = await preprocessImageForOCR(blob);
-      const ocrResult = await Tesseract.recognize(processedBlob, 'eng', {
+      const ocrResult = await Tesseract.recognize(processedBlob || blob, 'eng', {
         logger: m => {
-          if (m.status === 'recognizing text' && statusText) {
-            const pct = Math.round((m.progress || 0) * 100);
-            statusText.textContent = `⚡ Deciphering handwriting (${pct}%)...`;
+          if (m.status === 'recognizing text' && progressBar) {
+            const pct = Math.min(90, Math.round(55 + (m.progress || 0) * 35));
+            progressBar.style.width = `${pct}%`;
+            if (statusSub) statusSub.textContent = `Recognizing text (${Math.round((m.progress || 0) * 100)}%)...`;
           }
         }
       });
@@ -2931,84 +2950,84 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
     }
   }
 
-  // 2. Convert to Base64 & Send to Backend API if online
-  const reader = new FileReader();
-  reader.onloadend = async () => {
-    const base64Data = reader.result;
+  // Step 4: Backend API or Pharmacological Entity Resolution
+  if (progressBar) progressBar.style.width = '92%';
+  if (statusSub) statusSub.textContent = "Finalizing medicine plan & safety guidelines...";
+
+  let extracted = false;
+  try {
     const formData = new FormData();
     formData.append('image_base64', base64Data);
     if (clientOcrText) formData.append('text', clientOcrText);
 
-    let extracted = false;
-    try {
-      const res = await fetch(`${API_BASE}/api/extract`, {
-        method: 'POST',
-        body: formData
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.medications && data.medications.length > 0) {
-          state.currentDoc = data;
-          extracted = true;
-        }
+    const res = await fetch(`${API_BASE}/api/extract`, {
+      method: 'POST',
+      body: formData
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.medications && data.medications.length > 0) {
+        state.currentDoc = data;
+        extracted = true;
       }
-    } catch (err) {
-      console.log("Nemotron cloud API connecting or offline, running local Nemotron vision pipeline:", err);
     }
+  } catch (err) {
+    console.log("Nemotron cloud API connecting or offline, running local Nemotron vision pipeline:", err);
+  }
 
-    let hadDirectOcrMatch = false;
-    if (!extracted) {
-      // Parse OCR text with Comprehensive Clinical Entity Extractor
-      state.currentDoc = parseClinicalTextToDocument(clientOcrText, docTitle);
-      hadDirectOcrMatch = clientOcrText && clientOcrText.trim().length >= 8 && state.currentDoc.medications.length > 0;
-    }
+  let hadDirectOcrMatch = false;
+  if (!extracted) {
+    state.currentDoc = parseClinicalTextToDocument(clientOcrText, docTitle);
+    hadDirectOcrMatch = clientOcrText && clientOcrText.trim().length >= 8 && state.currentDoc.medications.length > 0;
+  }
 
-    // Unselect any pre-canned sample cards
-    document.querySelectorAll('.sample-card').forEach(el => el.classList.remove('active', 'selected'));
+  // Unselect any pre-canned sample cards
+  document.querySelectorAll('.sample-card').forEach(el => el.classList.remove('active', 'selected'));
 
-    // Reset adherence progress for newly uploaded document
-    state.activeTeachbackIdx = 0;
-    state.takenMeds.clear();
+  // Reset adherence progress
+  state.activeTeachbackIdx = 0;
+  state.takenMeds.clear();
 
-    // Simplify document into current language and build timeline & questions
-    await simplifyCurrentDoc();
+  // Complete progress bar
+  if (progressBar) progressBar.style.width = '100%';
+  if (statusText) statusText.textContent = "✅ NVIDIA Nemotron 3 Ultra — Extraction Complete!";
+  if (statusSub) statusSub.textContent = "Prescription verified successfully.";
 
-    // Update UI Header & Patient Badge
-    const t = UI_STRINGS[state.currentLang] || UI_STRINGS.en;
-    const docStatus = document.getElementById('lbl-header-doc-status');
-    if (docStatus && state.currentDoc) {
-      const docTypeLbl = state.currentDoc.document_type === 'discharge_summary' ? 'Discharge Summary' : 'Prescription';
-      docStatus.textContent = `${t.patientPrefix || "Active: "}${state.currentDoc.patient_name || 'Patient'} (${docTypeLbl})`;
-    }
-    const lblActivePatient = document.getElementById('lbl-active-patient');
-    if (lblActivePatient && state.currentDoc) {
-      lblActivePatient.textContent = `${t.patientPrefix || "Patient: "}${state.currentDoc.patient_name || 'Patient'}`;
-    }
+  // Simplify document into current language
+  await simplifyCurrentDoc();
 
-    renderSimplifiedPlan();
-    renderDailyTimeline();
-    renderTeachBack();
-    renderHospitalWayfinding();
+  // Update UI Header & Patient Badge
+  const t = UI_STRINGS[state.currentLang] || UI_STRINGS.en;
+  const docStatus = document.getElementById('lbl-header-doc-status');
+  if (docStatus && state.currentDoc) {
+    const docTypeLbl = state.currentDoc.document_type === 'discharge_summary' ? 'Discharge Summary' : 'Prescription';
+    docStatus.textContent = `${t.patientPrefix || "Active: "}${state.currentDoc.patient_name || 'Patient'} (${docTypeLbl})`;
+  }
+  const lblActivePatient = document.getElementById('lbl-active-patient');
+  if (lblActivePatient && state.currentDoc) {
+    lblActivePatient.textContent = `${t.patientPrefix || "Patient: "}${state.currentDoc.patient_name || 'Patient'}`;
+  }
 
-    if (statusText) statusText.textContent = "✅ NVIDIA Nemotron 3 Ultra — Extraction Complete!";
-    setTimeout(() => {
-      if (previewBanner) previewBanner.style.display = 'none';
-    }, 2500);
+  renderSimplifiedPlan();
+  renderDailyTimeline();
+  renderTeachBack();
+  renderHospitalWayfinding();
 
+  // Hide preview banner after short delay
+  setTimeout(() => {
+    if (previewBanner) previewBanner.style.display = 'none';
+  }, 2000);
+
+  // If OCR couldn't read handwriting automatically, open the verification wizard with image preview
+  if (!hadDirectOcrMatch && !extracted) {
+    openEditPrescriptionModal(clientOcrText || "");
+    speakDirectText("Prescription sheet received! Please confirm your medicines or speak them aloud.");
+  } else {
+    // Only switch tabs after scanning is 100% complete
     switchTab('tab-plan');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    if (!hadDirectOcrMatch && !extracted) {
-      // Open verification modal so user can confirm medicines against their uploaded sheet
-      setTimeout(() => {
-        openEditPrescriptionModal(clientOcrText || "");
-        speakDirectText("Prescription sheet received! Please confirm your medicines or speak them aloud.");
-      }, 900);
-    } else {
-      speakDirectText("Prescription extracted with NVIDIA Nemotron! Here is your clear medicine plan.");
-    }
-  };
-  reader.readAsDataURL(blob);
+    speakDirectText("Prescription extracted with NVIDIA Nemotron! Here is your clear medicine plan.");
+  }
 }
 
 // Comprehensive Pharmacological Entity & Line Parser
