@@ -1,4 +1,12 @@
+import sys
 import os
+from pathlib import Path
+
+# Ensure backend directory is in sys.path for direct and package execution
+_backend_dir = str(Path(__file__).resolve().parent)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 import re
 import base64
 from typing import Optional, List
@@ -22,6 +30,7 @@ from extractor import DocumentExtractor
 from simplifier import PlanSimplifier, LANGUAGE_CONFIG
 from teachback import TeachBackEngine
 from qa_assistant import MedicalQAAssistant
+from config import OPENROUTER_API_KEY
 
 app = FastAPI(
     title="CareBridge API",
@@ -29,7 +38,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for local development and web accessibility
+# Enable CORS for local development, Render deployment, and GitHub Pages
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,6 +46,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint for Render, uptime monitors, and frontends"""
+    return {
+        "status": "healthy",
+        "service": "CareBridge Backend API",
+        "llm_ready": bool(OPENROUTER_API_KEY)
+    }
 
 @app.get("/api/languages")
 def get_languages():
@@ -229,6 +248,27 @@ frontend_dir = docs_dir if os.path.exists(docs_dir) else os.path.abspath(os.path
 if os.path.exists(frontend_dir):
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
+@app.get("/styles.css")
+def serve_styles():
+    f = os.path.join(frontend_dir, "styles.css")
+    if os.path.exists(f):
+        return FileResponse(f, media_type="text/css")
+    return JSONResponse(status_code=404, content={"error": "styles.css not found"})
+
+@app.get("/app.js")
+def serve_app_js():
+    f = os.path.join(frontend_dir, "app.js")
+    if os.path.exists(f):
+        return FileResponse(f, media_type="application/javascript")
+    return JSONResponse(status_code=404, content={"error": "app.js not found"})
+
+@app.get("/carebridge_bg.jpg")
+def serve_bg():
+    f = os.path.join(frontend_dir, "carebridge_bg.jpg")
+    if os.path.exists(f):
+        return FileResponse(f, media_type="image/jpeg")
+    return JSONResponse(status_code=404, content={"error": "carebridge_bg.jpg not found"})
+
 @app.get("/sw.js")
 def serve_sw():
     sw_file = os.path.join(frontend_dir, "sw.js")
@@ -248,8 +288,10 @@ def serve_index():
     index_file = os.path.join(frontend_dir, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "CareCompass API is running. Docs static directory not initialized yet."}
+    return {"message": "CareBridge API is running. Docs static directory not initialized yet."}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    host = os.environ.get("HOST", "0.0.0.0")
+    uvicorn.run("app:app", host=host, port=port, reload=False)

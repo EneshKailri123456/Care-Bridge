@@ -3,6 +3,21 @@
  * Mobile-first, accessible, multilingual assistant for elderly & low-literacy patients.
  */
 
+// Centralized API Base URL Resolver for Local Dev, Render Hosting & GitHub Pages
+function getApiUrl(endpoint) {
+  const clean = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+  const custom = (localStorage.getItem('carebridge_backend_url') || '').trim();
+  if (custom) {
+    return `${custom.replace(/\/$/, '')}${clean}`;
+  }
+  // If hosted on GitHub Pages and no custom backend set, use default Render backend
+  if (window.location.hostname.includes('github.io')) {
+    return `https://carebridge-api.onrender.com${clean}`;
+  }
+  // Same origin (FastAPI backend) or localhost
+  return clean;
+}
+
 // Application State
 const state = {
   samples: [],
@@ -752,18 +767,71 @@ function setupEventListeners() {
         localStorage.setItem('carebridge_theme', state.isLightTheme ? 'light' : 'dark');
       } catch (e) {}
     });
+  }
 
-    // Check if user previously explicitly chose light theme; otherwise default is dark
-    try {
-      const savedTheme = localStorage.getItem('carebridge_theme');
-      if (savedTheme === 'light') {
-        state.isLightTheme = true;
-        document.body.classList.add('light-theme');
-      } else {
-        state.isLightTheme = false;
-        document.body.classList.remove('light-theme');
+  // Backend API Server Modal
+  const btnBackendSettings = document.getElementById('btn-backend-settings');
+  const modalBackendSettings = document.getElementById('modal-backend-settings');
+  const btnCloseBackendSettings = document.getElementById('btn-close-backend-settings');
+  const btnTestBackend = document.getElementById('btn-test-backend');
+  const btnSaveBackend = document.getElementById('btn-save-backend');
+  const inputBackendUrl = document.getElementById('input-backend-url');
+  const backendStatusMsg = document.getElementById('backend-status-msg');
+
+  if (btnBackendSettings && modalBackendSettings) {
+    btnBackendSettings.addEventListener('click', () => {
+      if (inputBackendUrl) {
+        inputBackendUrl.value = localStorage.getItem('carebridge_backend_url') || '';
       }
-    } catch (e) {}
+      modalBackendSettings.style.display = 'flex';
+      modalBackendSettings.classList.add('active');
+    });
+
+    btnCloseBackendSettings?.addEventListener('click', () => {
+      modalBackendSettings.style.display = 'none';
+      modalBackendSettings.classList.remove('active');
+    });
+
+    btnTestBackend?.addEventListener('click', async () => {
+      const url = (inputBackendUrl?.value || '').trim();
+      const testUrl = url ? `${url.replace(/\/$/, '')}/api/health` : getApiUrl('/api/health');
+      if (backendStatusMsg) {
+        backendStatusMsg.style.background = 'rgba(59, 130, 246, 0.1)';
+        backendStatusMsg.style.color = '#60a5fa';
+        backendStatusMsg.textContent = `⏳ Testing connection to ${testUrl}...`;
+      }
+      try {
+        const resp = await fetch(testUrl, { signal: AbortSignal.timeout(8000) });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (backendStatusMsg) {
+            backendStatusMsg.style.background = 'rgba(34, 197, 94, 0.15)';
+            backendStatusMsg.style.color = '#4ade80';
+            backendStatusMsg.textContent = `✅ Connected! Status: ${data.status || 'healthy'}`;
+          }
+        } else {
+          throw new Error(`Server returned HTTP ${resp.status}`);
+        }
+      } catch (err) {
+        if (backendStatusMsg) {
+          backendStatusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+          backendStatusMsg.style.color = '#f87171';
+          backendStatusMsg.textContent = `❌ Connection failed: ${err.message}. (Free Render servers may take ~30-50s to spin up on first request).`;
+        }
+      }
+    });
+
+    btnSaveBackend?.addEventListener('click', async () => {
+      const url = (inputBackendUrl?.value || '').trim();
+      if (url) {
+        localStorage.setItem('carebridge_backend_url', url);
+      } else {
+        localStorage.removeItem('carebridge_backend_url');
+      }
+      modalBackendSettings.style.display = 'none';
+      modalBackendSettings.classList.remove('active');
+      await loadSamples();
+    });
   }
 
   // Audio Play / Pause
@@ -1083,7 +1151,7 @@ function renderQAChips(lang) {
 // Fetch Sample Documents
 async function loadSamples() {
   try {
-    const res = await fetch('/api/samples');
+    const res = await fetch(getApiUrl('/api/samples'));
     if (!res.ok) throw new Error("Failed to load samples");
     state.samples = await res.json();
     renderSampleCards();
@@ -1142,7 +1210,7 @@ async function selectSample(sampleId, switchToPlan = true) {
   if (targetCard) targetCard.classList.add('active', 'selected');
 
   try {
-    const res = await fetch(`/api/samples/${sampleId}?lang=${state.currentLang}`);
+    const res = await fetch(getApiUrl(`/api/samples/${sampleId}?lang=${state.currentLang}`));
     if (!res.ok) throw new Error("Failed to fetch sample detail");
     const data = await res.json();
 
@@ -1183,7 +1251,7 @@ async function selectSample(sampleId, switchToPlan = true) {
 async function simplifyCurrentDoc() {
   if (!state.currentDoc) return;
   try {
-    const res = await fetch('/api/simplify', {
+    const res = await fetch(getApiUrl('/api/simplify'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1194,7 +1262,7 @@ async function simplifyCurrentDoc() {
     state.currentSimplified = await res.json();
 
     // Also regenerate teach-back questions in the selected language
-    const tbRes = await fetch(`/api/teachback/questions?lang=${state.currentLang}`, {
+    const tbRes = await fetch(getApiUrl(`/api/teachback/questions?lang=${state.currentLang}`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(state.currentDoc)
@@ -1494,7 +1562,7 @@ async function evaluateTeachBackChoice(questionId, selectedIdx, clickedBtn) {
   });
 
   try {
-    const res = await fetch('/api/teachback/evaluate', {
+    const res = await fetch(getApiUrl('/api/teachback/evaluate'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1630,7 +1698,7 @@ async function startTeachbackVoiceRecognition() {
     const activeQ = state.teachbackQuestions[state.activeTeachbackIdx];
     if (activeQ && event.results[event.results.length - 1].isFinal) {
       btnMic.classList.remove('recording');
-      const res = await fetch('/api/teachback/evaluate', {
+      const res = await fetch(getApiUrl('/api/teachback/evaluate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1790,7 +1858,7 @@ async function playSentenceChain(index) {
     formData.append('lang', state.currentLang);
     formData.append('rate', state.speechRate);
 
-    const res = await fetch('/api/tts', {
+    const res = await fetch(getApiUrl('/api/tts'), {
       method: 'POST',
       body: formData
     });
@@ -1916,7 +1984,7 @@ async function speakDirectText(text) {
     formData.append('lang', state.currentLang);
     formData.append('rate', state.speechRate);
 
-    const res = await fetch('/api/tts', {
+    const res = await fetch(getApiUrl('/api/tts'), {
       method: 'POST',
       body: formData
     });
@@ -2190,7 +2258,7 @@ async function processImageBlob(blob, docTitle = "Medical Document") {
     formData.append('image_base64', base64Data);
 
     try {
-      const res = await fetch('/api/extract', {
+      const res = await fetch(getApiUrl('/api/extract'), {
         method: 'POST',
         body: formData
       });
@@ -2248,7 +2316,7 @@ async function handleQASubmit() {
   }
 
   try {
-    const res = await fetch('/api/ask', {
+    const res = await fetch(getApiUrl('/api/ask'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2505,7 +2573,7 @@ async function stopQAVoiceRecognition() {
     formData.append('audio', wavBlob, 'recording.wav');
     formData.append('lang', state.currentLang);
 
-    const res = await fetch('/api/stt', {
+    const res = await fetch(getApiUrl('/api/stt'), {
       method: 'POST',
       body: formData
     });

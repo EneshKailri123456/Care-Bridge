@@ -1,6 +1,17 @@
 import os
 from pathlib import Path
 
+# Load environment variables from .env if available
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path)
+    else:
+        load_dotenv()
+except ImportError:
+    pass
+
 # OpenRouter & NVIDIA Nemotron Configuration
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 

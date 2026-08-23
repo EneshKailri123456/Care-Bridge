@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M5 24C5 12 27 12 27 24' stroke='%23ea580c' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M10 24C10 16 22 16 22 24' stroke='%23ea580c' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -57,6 +57,11 @@
         <!-- High Contrast Mode Toggle -->
         <button id="btn-high-contrast" class="btn-icon" title="Toggle High Contrast" aria-label="High Contrast Mode">
           👁️
+        </button>
+
+        <!-- Backend API Server Status / Config -->
+        <button id="btn-backend-settings" class="btn-icon" title="Backend Server Settings & Status" aria-label="Backend Server Settings">
+          ⚡
         </button>
       </div>
     </div>
@@ -643,8 +648,46 @@
           <div class="helpline-dial-badge">DIAL 112</div>
         </a>
 
-        <button id="btn-close-sos" class="btn-modal-dismiss">
-          ✕ Dismiss Window
+  <!-- ================= MODAL: BACKEND API SETTINGS ================= -->
+  <div class="modal-overlay" id="modal-backend-settings" style="display: none;">
+    <div class="alarm-modal-card" style="max-width: 520px; text-align: left; background: var(--bg-card, #1e293b); border: 1px solid var(--border-color, #334155); border-radius: 16px; padding: 24px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.6rem;">⚡</span>
+          <h2 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: var(--text-main, #f8fafc);">Backend Server Connection</h2>
+        </div>
+        <button id="btn-close-backend-settings" class="btn-icon" style="width: 32px; height: 32px; font-size: 1.1rem; cursor: pointer;">✕</button>
+      </div>
+
+      <p style="font-size: 0.9rem; color: var(--text-muted, #94a3b8); margin-bottom: 16px; line-height: 1.5;">
+        Connected to your FastAPI backend deployed on Render or running locally.
+      </p>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main, #f8fafc); margin-bottom: 6px;">
+          Backend API Base URL:
+        </label>
+        <input 
+          type="url" 
+          id="input-backend-url" 
+          placeholder="https://your-service-name.onrender.com" 
+          style="width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color, #334155); background: var(--bg-surface, #0f172a); color: var(--text-main, #f8fafc); font-size: 0.95rem;"
+        />
+        <div style="font-size: 0.78rem; color: var(--text-muted, #94a3b8); margin-top: 5px;">
+          Leave empty to use current domain/localhost or default Render server.
+        </div>
+      </div>
+
+      <div id="backend-status-msg" style="padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; margin-bottom: 16px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2);">
+        Ready to test connection.
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button id="btn-test-backend" class="btn-secondary" style="padding: 8px 16px; font-size: 0.88rem; cursor: pointer; border-radius: 8px;">
+          Test Connection
+        </button>
+        <button id="btn-save-backend" class="btn-cta-coral" style="padding: 8px 20px; font-size: 0.88rem; cursor: pointer; border-radius: 8px;">
+          Save & Connect
         </button>
       </div>
     </div>
@@ -653,6 +696,6 @@
 </div>
 
 <!-- Application Javascript -->
-<script src="/static/app.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>
