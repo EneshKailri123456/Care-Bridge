@@ -1148,20 +1148,409 @@ function renderQAChips(lang) {
   });
 }
 
+// ================= BUILT-IN CLINICAL SAMPLE CASES =================
+const FALLBACK_SAMPLES = [
+  {
+    id: "sample_post_op_discharge",
+    title: "🏥 Post-Surgery Discharge Summary (Orthopedics)",
+    subtitle: "Apollo Speciality Hospital — Total Knee Replacement Recovery",
+    badge: "Discharge Summary",
+    document_type: "discharge_summary",
+    patient_name: "Ramesh Chandra (Age 68)",
+    hospital: "Apollo Speciality Hospital, Bannerghatta Road, Bengaluru",
+    med_count: 4,
+    data: {
+      document_type: "discharge_summary",
+      patient_name: "Ramesh Chandra",
+      patient_language: "en",
+      medications: [
+        {
+          name: "Cefuroxime Axetil",
+          dose: "500 mg (1 tablet)",
+          frequency: "Twice daily after food",
+          timing: ["morning", "night"],
+          duration_days: 5,
+          special_instructions: "Take right after your morning and night meals. Finish the full 5-day antibiotic course.",
+          purpose: "Antibiotic to prevent surgical infection",
+          pill_color_type: "blue_tablet"
+        },
+        {
+          name: "Pantoprazole",
+          dose: "40 mg (1 tablet)",
+          frequency: "Once daily in the morning",
+          timing: ["morning"],
+          duration_days: 7,
+          special_instructions: "Take 30 minutes before your breakfast with a full glass of water.",
+          purpose: "Stomach protection against acidity and ulcers",
+          pill_color_type: "yellow_tablet"
+        },
+        {
+          name: "Paracetamol",
+          dose: "650 mg (1 tablet)",
+          frequency: "Three times daily after food",
+          timing: ["morning", "afternoon", "night"],
+          duration_days: 7,
+          special_instructions: "Take with water after eating. Helps relieve post-surgery knee soreness.",
+          purpose: "Pain and swelling relief",
+          pill_color_type: "white_tablet"
+        },
+        {
+          name: "Rivaroxaban",
+          dose: "10 mg (1 tablet)",
+          frequency: "Once daily at night with dinner",
+          timing: ["night"],
+          duration_days: 14,
+          special_instructions: "Take every evening with your dinner. Do not skip.",
+          purpose: "Blood thinner to prevent blood clots in legs",
+          pill_color_type: "red_tablet"
+        }
+      ],
+      follow_up: {
+        date: "2026-03-02",
+        location: "Apollo Speciality Hospital",
+        department: "Orthopedic OPD, Room 204 (Dr. Arvind Kumar)",
+        address: "Bannerghatta Main Road, Krishnaraju Layout, Bengaluru, Karnataka 560076",
+        wayfinding_steps: [
+          "Enter through Main Entrance Gate 2.",
+          "Take Elevator B to the 2nd Floor.",
+          "Turn right from the elevator lobby towards Orthopedics OPD.",
+          "Check in at Reception Desk 2 and take a token for Room 204."
+        ]
+      },
+      warning_symptoms: [
+        "Sudden sharp calf pain, swelling, or redness in your operated leg.",
+        "Fever higher than 101°F (38.3°C) or shivering.",
+        "Foul-smelling pus or active bleeding from the knee dressing.",
+        "Sudden shortness of breath or chest pain (Call 108 immediately)."
+      ],
+      raw_ocr_text: "Discharge Summary - Apollo Speciality Hospital - Total Knee Arthroplasty",
+      confidence_notes: "High confidence clinical extraction"
+    }
+  },
+  {
+    id: "sample_diabetes_hypertension",
+    title: "💊 Chronic Care Prescription (Diabetes & BP)",
+    subtitle: "Fortis Healthcare — Senior Internal Medicine Consultation",
+    badge: "Prescription",
+    document_type: "prescription",
+    patient_name: "Savitri Devi (Age 72)",
+    hospital: "Fortis Hospital, Cunningham Road, Bengaluru",
+    med_count: 3,
+    data: {
+      document_type: "prescription",
+      patient_name: "Savitri Devi",
+      patient_language: "hi",
+      medications: [
+        {
+          name: "Metformin Hydrochloride",
+          dose: "500 mg (1 white tablet)",
+          frequency: "Twice a day with breakfast and dinner",
+          timing: ["morning", "night"],
+          duration_days: 30,
+          special_instructions: "Always swallow with your first bite of food to avoid stomach upset.",
+          purpose: "Controls blood sugar levels",
+          pill_color_type: "white_tablet"
+        },
+        {
+          name: "Telmisartan",
+          dose: "40 mg (1 tablet)",
+          frequency: "Once a day in the morning",
+          timing: ["morning"],
+          duration_days: 30,
+          special_instructions: "Take every morning around 8 AM with water after breakfast.",
+          purpose: "Lowers blood pressure and protects your heart & kidneys",
+          pill_color_type: "yellow_tablet"
+        },
+        {
+          name: "Atorvastatin",
+          dose: "10 mg (1 tablet)",
+          frequency: "Once daily at bedtime",
+          timing: ["night"],
+          duration_days: 30,
+          special_instructions: "Take right before going to sleep at night.",
+          purpose: "Manages cholesterol and keeps blood vessels clear",
+          pill_color_type: "blue_tablet"
+        }
+      ],
+      follow_up: {
+        date: "2026-03-23",
+        location: "Fortis Hospital",
+        department: "General Medicine, Suite 4 (Dr. S. Meenakshi)",
+        address: "14, Cunningham Road, Vasanth Nagar, Bengaluru, Karnataka 560052",
+        wayfinding_steps: [
+          "Enter through Main Entrance.",
+          "Proceed straight past the pharmacy on the ground floor.",
+          "Consultation Suite 4 is on the left corridor."
+        ]
+      },
+      warning_symptoms: [
+        "Extreme dizziness, sudden cold sweating, or trembling hands (low sugar — eat 2 spoons of sugar or fruit juice immediately).",
+        "Severe throbbing headache, blurred vision, or chest tightness (blood pressure spike)."
+      ],
+      raw_ocr_text: "Fortis Healthcare - Diabetes & Hypertension Management Plan",
+      confidence_notes: "High confidence extraction"
+    }
+  },
+  {
+    id: "sample_respiratory_care",
+    title: "🫁 Bronchitis & Respiratory Care Plan",
+    subtitle: "Max Super Speciality Hospital — Pulmonology Clinic",
+    badge: "Prescription",
+    document_type: "prescription",
+    patient_name: "Gopalakrishnan N. (Age 75)",
+    hospital: "Max Super Speciality Hospital, Saket",
+    med_count: 4,
+    data: {
+      document_type: "prescription",
+      patient_name: "Gopalakrishnan N.",
+      patient_language: "kn",
+      medications: [
+        {
+          name: "Augmentin (Amoxicillin 625 mg)",
+          dose: "625 mg (1 tablet)",
+          frequency: "Twice daily after food",
+          timing: ["morning", "night"],
+          duration_days: 6,
+          special_instructions: "Take right after food. Complete all 6 days even if cough feels better.",
+          purpose: "Antibiotic for chest infection",
+          pill_color_type: "white_tablet"
+        },
+        {
+          name: "Foracort 200 Inhaler",
+          dose: "2 puffs",
+          frequency: "Twice daily using spacer",
+          timing: ["morning", "night"],
+          duration_days: 14,
+          special_instructions: "Inhale deeply through the spacer device. Rinse mouth thoroughly with water after use.",
+          purpose: "Opens airways and eases breathing",
+          pill_color_type: "inhaler"
+        },
+        {
+          name: "Ascoril-D Cough Syrup",
+          dose: "10 ml (2 teaspoons)",
+          frequency: "Three times daily after food",
+          timing: ["morning", "afternoon", "night"],
+          duration_days: 5,
+          special_instructions: "Measure using the bottle cap. Drink after meals.",
+          purpose: "Soothes throat irritation and cough",
+          pill_color_type: "blue_liquid"
+        },
+        {
+          name: "Levocetirizine",
+          dose: "5 mg (1 tablet)",
+          frequency: "Once daily at night",
+          timing: ["night"],
+          duration_days: 5,
+          special_instructions: "Take before sleeping. May cause mild drowsiness.",
+          purpose: "Allergy and runny nose relief",
+          pill_color_type: "yellow_tablet"
+        }
+      ],
+      follow_up: {
+        date: "2026-02-28",
+        location: "Max Super Speciality Hospital",
+        department: "Pulmonology Suite 102 (Dr. Rajiv Narang)",
+        address: "1, 2, Press Enclave Marg, Saket Institutional Area, New Delhi 110017",
+        wayfinding_steps: [
+          "Enter through Tower 1 Main Lobby.",
+          "Take Escalator or Lift to 1st Floor.",
+          "Follow Blue Floor Line directly to Pulmonology Suite 102."
+        ]
+      },
+      warning_symptoms: [
+        "Severe difficulty breathing or wheezing that does not improve after inhaler.",
+        "Bluish color on lips, nailbeds, or tongue (Go to Emergency immediately).",
+        "High fever above 102°F or coughing up rust-colored blood."
+      ],
+      raw_ocr_text: "Max Hospital - Pulmonology Prescription",
+      confidence_notes: "High confidence extraction"
+    }
+  },
+  {
+    id: "sample_cardiac_care",
+    title: "❤️ Cardiac Care & Blood Thinner Plan",
+    subtitle: "Narayana Institute of Cardiac Sciences — Post-Angioplasty Care",
+    badge: "Discharge Summary",
+    document_type: "discharge_summary",
+    patient_name: "Devadas Pillai (Age 65)",
+    hospital: "Narayana Health City, Bommasandra, Bengaluru",
+    med_count: 4,
+    data: {
+      document_type: "discharge_summary",
+      patient_name: "Devadas Pillai",
+      patient_language: "ta",
+      medications: [
+        {
+          name: "Ecosprin (Aspirin 75 mg)",
+          dose: "75 mg (1 tablet)",
+          frequency: "Once daily in the morning with food",
+          timing: ["morning"],
+          duration_days: 90,
+          special_instructions: "Take immediately after morning breakfast. Never skip this tablet.",
+          purpose: "Prevents blood clots inside the heart stent",
+          pill_color_type: "red_tablet"
+        },
+        {
+          name: "Clopidogrel",
+          dose: "75 mg (1 tablet)",
+          frequency: "Once daily in the morning with food",
+          timing: ["morning"],
+          duration_days: 90,
+          special_instructions: "Take together with Ecosprin after breakfast.",
+          purpose: "Second blood thinner protecting your heart stent",
+          pill_color_type: "white_tablet"
+        },
+        {
+          name: "Metoprolol Succinate",
+          dose: "25 mg (1 tablet)",
+          frequency: "Once daily in the morning",
+          timing: ["morning"],
+          duration_days: 30,
+          special_instructions: "Take in the morning with water. Helps maintain steady heart rate.",
+          purpose: "Heart rate & blood pressure regulator",
+          pill_color_type: "yellow_tablet"
+        },
+        {
+          name: "Rosuvastatin",
+          dose: "20 mg (1 tablet)",
+          frequency: "Once daily at night",
+          timing: ["night"],
+          duration_days: 30,
+          special_instructions: "Take right before going to bed.",
+          purpose: "Keeps heart arteries clean and smooth",
+          pill_color_type: "blue_tablet"
+        }
+      ],
+      follow_up: {
+        date: "2026-03-05",
+        location: "Narayana Health City",
+        department: "Cardiac Outpatient Wing, Counter 8 (Dr. K. Shetty)",
+        address: "258/A, Bommasandra Industrial Area, Anekal Taluk, Bengaluru, Karnataka 560099",
+        wayfinding_steps: [
+          "Enter through Gate 1 (Cardiac Block).",
+          "Head to Ground Floor Outpatient Hall.",
+          "Proceed to Counter 8 for Cardiac Consultation."
+        ]
+      },
+      warning_symptoms: [
+        "Chest heaviness, squeezing pressure, or pain radiating to left arm/jaw.",
+        "Sudden fainting, cold perspiration, or irregular racing heartbeat.",
+        "Unusual heavy bleeding from gums, nose, or in urine/stool (Call doctor immediately)."
+      ],
+      raw_ocr_text: "Narayana Health - Cardiac Angioplasty Order",
+      confidence_notes: "High confidence extraction"
+    }
+  }
+];
+
+// Helper: Generate structured simplified plan locally
+function generateLocalSimplifiedPlan(doc, lang = 'en') {
+  const t = UI_STRINGS[lang] || UI_STRINGS.en;
+  const langLabels = { en: "English", hi: "हिंदी", kn: "ಕನ್ನಡ", ta: "தமிழ்", te: "తెలుగు", bn: "বাংলা", es: "Español" };
+  const count = (doc && doc.medications) ? doc.medications.length : 0;
+  
+  const greeting = (t.greeting || "Welcome! Here is your clear, easy-to-follow medicine plan.");
+  const summary = (t.summary_template || `Your doctor has prescribed ${count} medicines. Taking them on time will help you heal safely.`);
+
+  const dailySchedule = { morning: [], afternoon: [], night: [] };
+  const simplifiedMeds = [];
+  const audioSentences = [greeting, summary];
+
+  (doc?.medications || []).forEach((med, idx) => {
+    let iconType = med.pill_color_type || "white_tablet";
+    if (med.name.toLowerCase().includes("inhaler")) iconType = "inhaler";
+    else if (med.name.toLowerCase().includes("syrup")) iconType = "blue_liquid";
+
+    const timingList = Array.isArray(med.timing) ? med.timing : ["morning"];
+    timingList.forEach(slot => {
+      if (dailySchedule[slot]) {
+        dailySchedule[slot].push({
+          name: med.name,
+          dose: med.dose,
+          instructions: med.special_instructions,
+          purpose: med.purpose,
+          icon_type: iconType
+        });
+      }
+    });
+
+    const timingStr = timingList.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" & ");
+    simplifiedMeds.push({
+      name: med.name,
+      dose: med.dose,
+      timing_text: timingStr,
+      instructions: med.special_instructions || "Take with water as directed.",
+      purpose: med.purpose || "Prescribed by your doctor",
+      duration_days: med.duration_days || 7,
+      is_ongoing: !med.duration_days,
+      icon_type: iconType
+    });
+
+    audioSentences.push(`Medicine ${idx + 1}: ${med.name}, ${med.dose}. Take in the ${timingStr}. ${med.special_instructions || ''}`);
+  });
+
+  if (doc?.follow_up?.date) {
+    audioSentences.push(`Your next doctor visit is scheduled for ${doc.follow_up.date} at ${doc.follow_up.location || 'Hospital'}.`);
+  }
+
+  if (doc?.warning_symptoms && doc.warning_symptoms.length > 0) {
+    audioSentences.push(`Important: Contact doctor immediately if you notice ${doc.warning_symptoms[0]}.`);
+  }
+
+  return {
+    language: lang,
+    language_label: langLabels[lang] || "English",
+    greeting: greeting,
+    overall_summary: summary,
+    audio_sentences: audioSentences,
+    medications: simplifiedMeds,
+    daily_schedule: dailySchedule,
+    follow_up_summary: doc?.follow_up ? `Visit ${doc.follow_up.department || ''} at ${doc.follow_up.location || ''} on ${doc.follow_up.date || ''}` : "Follow up as advised.",
+    warning_summary: doc?.warning_symptoms ? doc.warning_symptoms.join(". ") : ""
+  };
+}
+
+// Helper: Generate verification teach-back questions locally
+function generateLocalTeachbackQuestions(doc, lang = 'en') {
+  const questions = [];
+  (doc?.medications || []).forEach((med, idx) => {
+    const timingStr = (med.timing || ["morning"]).join(" & ");
+    questions.push({
+      id: `tb_q_${idx}`,
+      medication_name: med.name,
+      question_text: `When and how should you take ${med.name}?`,
+      spoken_prompt: `Can you confirm when you will take your ${med.name}?`,
+      options: [
+        `Take ${med.dose} in the ${timingStr} (${med.special_instructions || 'with meals'})`,
+        `Take it only once a week whenever I have pain`,
+        `Stop taking it immediately if I feel slightly better tomorrow`
+      ],
+      correct_option_index: 0,
+      encouraging_praise: `🌟 Brilliant! That's exactly right. Take ${med.name} in the ${timingStr}.`,
+      gentle_explanation: `💛 That's close! Remember to take ${med.name} (${med.dose}) in the ${timingStr} as prescribed.`
+    });
+  });
+  return questions;
+}
+
 // Fetch Sample Documents
 async function loadSamples() {
   try {
-    const res = await fetch(getApiUrl('/api/samples'));
-    if (!res.ok) throw new Error("Failed to load samples");
-    state.samples = await res.json();
-    renderSampleCards();
-
-    // Auto-load first sample as default quietly on initial startup
-    if (state.samples.length > 0) {
-      await selectSample(state.samples[0].id, false);
+    const res = await fetch(getApiUrl('/api/samples'), { signal: AbortSignal.timeout(2000) });
+    if (res.ok) {
+      state.samples = await res.json();
+    } else {
+      state.samples = FALLBACK_SAMPLES;
     }
   } catch (err) {
-    console.error("Error loading samples:", err);
+    console.warn("Using offline clinical samples:", err);
+    state.samples = FALLBACK_SAMPLES;
+  }
+  renderSampleCards();
+
+  // Auto-load first sample as default quietly on initial startup
+  if (state.samples.length > 0) {
+    await selectSample(state.samples[0].id, false);
   }
 }
 
@@ -1171,7 +1560,8 @@ function renderSampleCards() {
   if (!container) return;
   container.innerHTML = '';
 
-  state.samples.forEach((sample, idx) => {
+  const sampleList = (state.samples && state.samples.length > 0) ? state.samples : FALLBACK_SAMPLES;
+  sampleList.forEach((sample, idx) => {
     const card = document.createElement('div');
     card.className = `sample-card ${idx === 0 ? 'active' : ''}`;
     card.id = `sample-card-${sample.id}`;
@@ -1190,7 +1580,7 @@ function renderSampleCards() {
         <div class="sample-card-hospital">${sample.subtitle}</div>
         <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
           <span class="badge" style="background: var(--secondary-subtle); color: var(--secondary-dark);">${sample.badge}</span>
-          <span class="badge" style="background: var(--primary-subtle); color: var(--primary-dark);">${sample.med_count} Medicines</span>
+          <span class="badge" style="background: var(--primary-subtle); color: var(--primary-dark);">${sample.med_count || (sample.data ? sample.data.medications.length : 3)} Medicines</span>
           <span class="badge" style="background: var(--bg-main); color: var(--text-muted);">${sample.patient_name || 'Patient'}</span>
         </div>
       </div>
@@ -1209,47 +1599,58 @@ async function selectSample(sampleId, switchToPlan = true) {
   const targetCard = document.getElementById(`sample-card-${sampleId}`);
   if (targetCard) targetCard.classList.add('active', 'selected');
 
+  let loaded = false;
   try {
-    const res = await fetch(getApiUrl(`/api/samples/${sampleId}?lang=${state.currentLang}`));
-    if (!res.ok) throw new Error("Failed to fetch sample detail");
-    const data = await res.json();
-
-    state.currentDoc = data.document;
-    state.currentSimplified = data.simplified;
-    state.teachbackQuestions = data.teachback_questions;
-    state.activeTeachbackIdx = 0;
-    state.takenMeds.clear();
-
-    // Update UI Header & Patient Badge
-    const t = UI_STRINGS[state.currentLang] || UI_STRINGS.en;
-    const docStatus = document.getElementById('lbl-header-doc-status');
-    if (docStatus) {
-      const docTypeLbl = state.currentDoc.document_type === 'discharge_summary' ? 'Discharge Summary' : 'Prescription';
-      docStatus.textContent = `${t.patientPrefix || "Active: "}${state.currentDoc.patient_name || 'Patient'} (${docTypeLbl})`;
-    }
-    const lblActivePatient = document.getElementById('lbl-active-patient');
-    if (lblActivePatient) {
-      lblActivePatient.textContent = `${t.patientPrefix || "Patient: "}${state.currentDoc.patient_name || 'Patient'}`;
-    }
-
-    renderSimplifiedPlan();
-    renderDailyTimeline();
-    renderTeachBack();
-    renderHospitalWayfinding();
-
-    if (switchToPlan) {
-      playMedicalChime();
-      switchTab('tab-plan');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    const res = await fetch(getApiUrl(`/api/samples/${sampleId}?lang=${state.currentLang}`), { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const data = await res.json();
+      state.currentDoc = data.document;
+      state.currentSimplified = data.simplified;
+      state.teachbackQuestions = data.teachback_questions;
+      loaded = true;
     }
   } catch (err) {
-    console.error("Failed to load sample detail:", err);
+    console.warn("Backend sample detail timeout, generating locally:", err);
+  }
+
+  if (!loaded) {
+    const sampleObj = (state.samples && state.samples.length > 0 ? state.samples : FALLBACK_SAMPLES).find(s => s.id === sampleId) || FALLBACK_SAMPLES[0];
+    state.currentDoc = sampleObj.data || sampleObj;
+    state.currentSimplified = generateLocalSimplifiedPlan(state.currentDoc, state.currentLang);
+    state.teachbackQuestions = generateLocalTeachbackQuestions(state.currentDoc, state.currentLang);
+  }
+
+  state.activeTeachbackIdx = 0;
+  state.takenMeds.clear();
+
+  // Update UI Header & Patient Badge
+  const t = UI_STRINGS[state.currentLang] || UI_STRINGS.en;
+  const docStatus = document.getElementById('lbl-header-doc-status');
+  if (docStatus) {
+    const docTypeLbl = state.currentDoc.document_type === 'discharge_summary' ? 'Discharge Summary' : 'Prescription';
+    docStatus.textContent = `${t.patientPrefix || "Active: "}${state.currentDoc.patient_name || 'Patient'} (${docTypeLbl})`;
+  }
+  const lblActivePatient = document.getElementById('lbl-active-patient');
+  if (lblActivePatient) {
+    lblActivePatient.textContent = `${t.patientPrefix || "Patient: "}${state.currentDoc.patient_name || 'Patient'}`;
+  }
+
+  renderSimplifiedPlan();
+  renderDailyTimeline();
+  renderTeachBack();
+  renderHospitalWayfinding();
+
+  if (switchToPlan) {
+    playMedicalChime();
+    switchTab('tab-plan');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
 
 // Call API to simplify current document into selected language
 async function simplifyCurrentDoc() {
   if (!state.currentDoc) return;
+  let simplifiedSuccess = false;
   try {
     const res = await fetch(getApiUrl('/api/simplify'), {
       method: 'POST',
@@ -1257,25 +1658,41 @@ async function simplifyCurrentDoc() {
       body: JSON.stringify({
         document: state.currentDoc,
         target_language: state.currentLang
-      })
+      }),
+      signal: AbortSignal.timeout(3000)
     });
-    state.currentSimplified = await res.json();
+    if (res.ok) {
+      state.currentSimplified = await res.json();
+      simplifiedSuccess = true;
+    }
+  } catch (err) {
+    console.warn("Backend simplification timeout, generating locally:", err);
+  }
 
-    // Also regenerate teach-back questions in the selected language
+  if (!simplifiedSuccess) {
+    state.currentSimplified = generateLocalSimplifiedPlan(state.currentDoc, state.currentLang);
+  }
+
+  try {
     const tbRes = await fetch(getApiUrl(`/api/teachback/questions?lang=${state.currentLang}`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state.currentDoc)
+      body: JSON.stringify(state.currentDoc),
+      signal: AbortSignal.timeout(2000)
     });
-    state.teachbackQuestions = await tbRes.json();
-
-    renderSimplifiedPlan();
-    renderDailyTimeline();
-    renderTeachBack();
-    renderHospitalWayfinding();
-  } catch (err) {
-    console.error("Error simplifying document:", err);
+    if (tbRes.ok) {
+      state.teachbackQuestions = await tbRes.json();
+    } else {
+      state.teachbackQuestions = generateLocalTeachbackQuestions(state.currentDoc, state.currentLang);
+    }
+  } catch (e) {
+    state.teachbackQuestions = generateLocalTeachbackQuestions(state.currentDoc, state.currentLang);
   }
+
+  renderSimplifiedPlan();
+  renderDailyTimeline();
+  renderTeachBack();
+  renderHospitalWayfinding();
 }
 
 // Render the Simplified Plan View
