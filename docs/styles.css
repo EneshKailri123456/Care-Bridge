@@ -289,6 +289,46 @@ body.light-theme .header-status-pill {
   transform: translateY(-2px);
 }
 
+/* Download / Install App Navigation Button */
+.btn-download-app {
+  width: auto;
+  height: 42px;
+  border-radius: var(--radius-full);
+  padding: 0 16px;
+  gap: 6px;
+  background: var(--primary);
+  color: #000000;
+  font-weight: 800;
+  border: 1px solid var(--primary-light);
+  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.35);
+}
+
+.btn-download-app:hover {
+  background: var(--primary-light);
+  color: #000000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.5);
+}
+
+body.light-theme .btn-download-app {
+  background: var(--primary);
+  color: white;
+  border: none;
+}
+
+body.light-theme .btn-download-app:hover {
+  background: var(--primary-dark);
+  color: white;
+}
+
+.btn-install-label {
+  display: inline;
+  font-size: 0.85rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 body.light-theme .btn-icon {
   background: var(--secondary);
   color: white;
@@ -2369,6 +2409,18 @@ body.high-contrast .btn-modal-dismiss {
     width: 34px;
     height: 34px;
     font-size: 0.8rem;
+  }
+
+  .btn-download-app {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .btn-install-label {
+    display: none;
   }
 
   /* Smooth Touch-Scroll Tab Stepper */

@@ -771,6 +771,67 @@ function setupEventListeners() {
     } catch (e) {}
   }
 
+  // ================= DOWNLOAD / INSTALL APP FEATURE ================= //
+  let deferredInstallPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    console.log("PWA install prompt ready");
+    const btnInstall = document.getElementById('btn-install-app');
+    if (btnInstall) {
+      btnInstall.style.boxShadow = '0 0 14px rgba(249, 115, 22, 0.7)';
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    console.log("Carebridge App installed successfully!");
+    const modal = document.getElementById('modal-install-guide');
+    if (modal) modal.classList.remove('active');
+    speakDirectText("Carebridge Application installed successfully!");
+  });
+
+  const btnInstallNav = document.getElementById('btn-install-app');
+  if (btnInstallNav) {
+    btnInstallNav.addEventListener('click', () => {
+      const modal = document.getElementById('modal-install-guide');
+      if (modal) modal.classList.add('active');
+    });
+  }
+
+  const btnTriggerInstall = document.getElementById('btn-trigger-pwa-install');
+  if (btnTriggerInstall) {
+    btnTriggerInstall.addEventListener('click', async () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        console.log(`User choice for install: ${outcome}`);
+        deferredInstallPrompt = null;
+        const modal = document.getElementById('modal-install-guide');
+        if (modal) modal.classList.remove('active');
+      } else {
+        alert("To install Carebridge:\n\n• Android: Tap browser menu (⋮) -> 'Install App' or 'Add to Home screen'\n• iPhone: Tap Share button -> 'Add to Home Screen'\n• PC/Mac: Click the Install icon in the address bar.");
+      }
+    });
+  }
+
+  const btnCloseInstall = document.getElementById('btn-close-install-modal');
+  if (btnCloseInstall) {
+    btnCloseInstall.addEventListener('click', () => {
+      const modal = document.getElementById('modal-install-guide');
+      if (modal) modal.classList.remove('active');
+    });
+  }
+
+  const btnDismissInstall = document.getElementById('btn-dismiss-install-modal');
+  if (btnDismissInstall) {
+    btnDismissInstall.addEventListener('click', () => {
+      const modal = document.getElementById('modal-install-guide');
+      if (modal) modal.classList.remove('active');
+    });
+  }
+
   // Audio Play / Pause
   const btnPlayAudio = document.getElementById('btn-main-play-audio');
   btnPlayAudio.addEventListener('click', toggleAudioPlayback);
