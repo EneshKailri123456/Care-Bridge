@@ -91,6 +91,7 @@ def get_sample_detail(sample_id: str, lang: str = "en"):
 
 @app.post("/api/extract", response_model=MedicalDocument)
 async def extract_document(
+    request: Request,
     text: Optional[str] = Form(None),
     sample_id: Optional[str] = Form(None),
     image_base64: Optional[str] = Form(None),
@@ -101,12 +102,24 @@ async def extract_document(
     """
     import base64
 
+    # Check if client sent application/json
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                sample_id = sample_id or body.get("sample_id")
+                text = text or body.get("text")
+                image_base64 = image_base64 or body.get("image_base64")
+        except Exception:
+            pass
+
     if sample_id:
         return DocumentExtractor.extract_from_sample(sample_id)
 
     if image_base64:
         # Strip data URL prefix if present
-        clean_b64 = re.sub(r"^data:image\/[a-zA-Z]+;base64,", "", image_base64)
+        clean_b64 = re.sub(r"^data:[^;]+;base64,", "", image_base64.strip())
         return DocumentExtractor.extract_from_text(
             text="Prescription Image extracted via OCR & NVIDIA Nemotron 3 Ultra",
             image_base64=clean_b64
