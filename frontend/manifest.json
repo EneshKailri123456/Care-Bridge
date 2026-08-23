@@ -1,0 +1,17 @@
+{
+  "name": "CareBridge — Medical Paperwork Simplifier",
+  "short_name": "CareBridge",
+  "description": "Patient-centered discharge & prescription simplifier with voice narration, multi-dose adherence tracking, and background medicine reminder alarms.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    {
+      "src": "/static/carebridge_bg.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

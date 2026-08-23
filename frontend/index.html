@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carebridge</title>
+  <meta name="description" content="Carebridge bridges clinical documents into plain language, voice narration, and daily schedules for seniors and caregivers.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M5 24C5 12 27 12 27 24' stroke='%23ea580c' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M10 24C10 16 22 16 22 24' stroke='%23ea580c' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Top Navigation & Brand Header -->
+  <header class="top-nav">
+    <div class="top-nav-inner">
+      <a href="#" class="brand" id="btn-home-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 24C5 12 27 12 27 24" stroke="#ea580c" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M10 24C10 16 22 16 22 24" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="brand-title">Carebridge</span>
+      </a>
+
+      <!-- Quick Patient & Doc Status Banner (Desktop/Laptop) -->
+      <div class="header-status-pill">
+        <span class="live-dot"></span>
+        <span id="lbl-header-doc-status">Active Document: Ready</span>
+      </div>
+
+      <!-- Navigation & Accessibility Actions -->
+      <div class="nav-actions">
+        <!-- Language Picker -->
+        <div class="lang-select-wrapper">
+          <select id="global-lang-select" class="lang-select" aria-label="Select Language">
+            <option value="en">🌐 English</option>
+            <option value="hi">🌐 हिंदी (Hindi)</option>
+            <option value="kn">🌐 ಕನ್ನಡ (Kannada)</option>
+            <option value="ta">🌐 தமிழ் (Tamil)</option>
+            <option value="te">🌐 తెలుగు (Telugu)</option>
+            <option value="bn">🌐 বাংলা (Bengali)</option>
+            <option value="es">🌐 Español</option>
+          </select>
+        </div>
+
+        <!-- Font Zoomer -->
+        <button id="btn-font-zoom" class="btn-icon" title="Toggle Larger Text" aria-label="Increase Font Size">
+          A+
+        </button>
+
+        <!-- High Contrast Mode Toggle -->
+        <button id="btn-high-contrast" class="btn-icon" title="Toggle High Contrast" aria-label="High Contrast Mode">
+          👁️
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tab Stepper Bar -->
+  <nav class="tab-stepper" role="tablist">
+    <div class="tab-stepper-inner">
+      <button class="tab-btn active" data-tab="tab-scan" role="tab" id="tab-btn-scan">
+        <span class="tab-icon">📸</span>
+        <span id="nav-lbl-scan">1. Scan Paperwork</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-plan" role="tab" id="tab-btn-plan">
+        <span class="tab-icon">💡</span>
+        <span id="nav-lbl-plan">2. Plain Plan</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-timeline" role="tab" id="tab-btn-timeline">
+        <span class="tab-icon">⏰</span>
+        <span id="nav-lbl-timeline">3. Daily Schedule</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-teachback" role="tab" id="tab-btn-teachback">
+        <span class="tab-icon">🎓</span>
+        <span id="nav-lbl-teachback">4. Teach-Back</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-hospital" role="tab" id="tab-btn-hospital">
+        <span class="tab-icon">🧭</span>
+        <span id="nav-lbl-hospital">5. Hospital Wayfinding</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-qa" role="tab" id="tab-btn-qa">
+        <span class="tab-icon">🎙️</span>
+        <span id="nav-lbl-qa">6. Ask CareBridge</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Responsive Content Container -->
+  <main class="main-content">
+    
+    <!-- ================= VIEW 1: SCAN & SAMPLES ================= -->
+    <section id="tab-scan" class="view-section active">
+      <div class="desktop-grid-2">
+        
+        <!-- Left: Upload & Paste Controls matching Screenshot -->
+        <div class="grid-col-left">
+          <div class="hero-scan-box">
+            <div class="hero-badge" id="txt-hero-pretitle">TECHNOLOGY FOR THE FORGOTTEN</div>
+            <h1 class="hero-scan-title" id="txt-scan-title">Welcome to Carebridge:<br>Your Accessible Healthcare Assistant</h1>
+            <p class="hero-scan-desc" id="txt-scan-subtitle">
+              Snap a photo of any prescription or medical report. We read it, translate it into your language, and help you take the next step — safely and on time.
+            </p>
+
+            <div class="scan-buttons-grid">
+              <button id="btn-open-camera" class="btn-cta-coral">
+                <span class="btn-emoji">📸</span>
+                <span id="lbl-camera-btn">Take Photo</span>
+              </button>
+              <button id="btn-paste-image" class="btn-cta-glass">
+                <span class="btn-emoji">📋</span>
+                <span id="lbl-paste-btn">Paste Image (Ctrl+V)</span>
+              </button>
+              <button type="button" id="btn-upload-file" class="btn-cta-outline" style="cursor: pointer;">
+                <span class="btn-emoji">📂</span>
+                <span id="lbl-upload-btn">Upload File</span>
+              </button>
+              <input type="file" id="file-upload-input" accept="image/*,application/pdf" style="display: none;">
+            </div>
+
+            <!-- Interactive Paste Dropzone Box -->
+            <div id="paste-dropzone" class="paste-dropzone-box" tabindex="0" title="Click here and press Ctrl+V to paste an image">
+              <div class="paste-icon-wrap">📋</div>
+              <div class="paste-text-main">Press <strong>Ctrl + V</strong> Anywhere to Paste</div>
+              <div class="paste-text-sub">Copy any prescription photo from WhatsApp, clipboard, or screenshot and paste directly</div>
+            </div>
+
+            <!-- Pasted Image Processing Banner -->
+            <div id="paste-preview-banner" class="paste-preview-card" style="display: none;">
+              <img id="paste-thumbnail" src="" alt="Pasted Prescription Preview" class="paste-thumb-img">
+              <div style="text-align: left; flex: 1;">
+                <div style="font-weight: 800; font-size: 0.95rem;" id="paste-status-text">⚡ Extracting Medical Information...</div>
+                <div style="font-size: 0.8rem; opacity: 0.85;">Pharmacological Drug Resolver & Schema Normalizer</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Pre-loaded Demo Clinical Documents -->
+        <div class="grid-col-right">
+          <div class="samples-header">
+            <h3 class="samples-title" id="txt-demo-title">⚡ Or Try Instant Sample Documents:</h3>
+            <span class="samples-subtitle">Click any clinical case to simulate instant patient onboarding:</span>
+          </div>
+
+          <div class="sample-cards-list" id="sample-cards-container">
+            <!-- Injected via JavaScript -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 2: PLAIN LANGUAGE PLAN & VOICE ================= -->
+    <section id="tab-plan" class="view-section">
+      <div class="desktop-grid-2">
+        
+        <!-- Left: Audio Player & Voice Karaoke -->
+        <div class="grid-col-left">
+          <!-- Voice Audio Player Widget -->
+          <div class="audio-player-card">
+            <div class="audio-header">
+              <div class="audio-title">
+                <span id="txt-listen-heading">🔊 Read Plan Aloud</span>
+              </div>
+              <div class="waveform-bars" id="audio-waveform">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+              </div>
+            </div>
+
+            <div class="audio-controls">
+              <button id="btn-main-play-audio" class="btn-audio-play" aria-label="Play or Pause Plan Audio">
+                ▶
+              </button>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 1.05rem;" id="txt-tts-status">Tap Play to listen</div>
+                <div style="font-size: 0.85rem; opacity: 0.9; color: #facc15;" id="txt-tts-lang-indicator">🎙️ Neural Voice Engine (Hindi, Kannada, Tamil, Telugu, Bengali, English)</div>
+              </div>
+              <button id="btn-toggle-speed" class="btn-audio-speed" title="Adjust voice speed">
+                Speed: <span id="lbl-speed">1.0x</span>
+              </button>
+            </div>
+
+            <!-- Realtime Karaoke Sentence Box -->
+            <div class="karaoke-box" id="karaoke-text-container">
+              <span class="karaoke-sentence">Tap the yellow Play button above to hear this medical plan read aloud in clear, gentle speech.</span>
+            </div>
+          </div>
+
+          <!-- Plain Summary Card -->
+          <div class="card card-highlight">
+            <div class="card-title-row">
+              <h2 class="card-title">
+                <span>📋</span> <span id="txt-plan-headline">Your Easy Medicine Plan</span>
+              </h2>
+              <span class="badge" id="badge-doc-type">Prescription</span>
+            </div>
+            <p id="txt-plan-greeting" class="plan-greeting"></p>
+            <p id="txt-plan-summary" style="font-size: 1.05rem; color: var(--text-main); line-height: 1.7;"></p>
+          </div>
+        </div>
+
+        <!-- Right: Medications List & Warning Signs -->
+        <div class="grid-col-right">
+          <!-- Simplified Medications List -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3 class="card-title"><span>💊</span> <span id="txt-med-list-title">Medicines & Instructions</span></h3>
+              <button id="btn-go-to-timeline" class="btn-mini-listen" style="background: var(--primary); color: white;">
+                ⏰ View Daily Timeline
+              </button>
+            </div>
+            <div id="simplified-meds-container" class="meds-list-container">
+              <!-- Injected via JavaScript -->
+            </div>
+          </div>
+
+          <!-- Red Flag Warning Signs -->
+          <div class="card card-warning" id="plan-warnings-card">
+            <div class="card-title-row">
+              <h3 class="card-title" style="color: var(--danger);">
+                <span>⚠️</span> <span id="txt-warnings-title">When to Contact Doctor Immediately</span>
+              </h3>
+              <button class="btn-mini-listen" id="btn-read-warnings" style="border-color: var(--danger); color: var(--danger);">
+                🔊 Listen
+              </button>
+            </div>
+            <ul id="plan-warnings-list" class="warnings-bullet-list">
+              <!-- Injected via JavaScript -->
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 3: DAILY TIMELINE & ALARMS ================= -->
+    <section id="tab-timeline" class="view-section">
+      <div class="desktop-grid-2">
+        
+        <!-- Left: Adherence Progress & Alarms -->
+        <div class="grid-col-left">
+          <!-- Adherence Progress Ribbon -->
+          <div class="card card-adherence">
+            <div class="card-title-row">
+              <h2 class="card-title" style="font-size: 1.15rem; color: var(--primary-dark);">
+                <span>📅</span> <span id="txt-adherence-title">Today's Medicine Progress</span>
+              </h2>
+              <span class="badge badge-pill" id="badge-adherence-count">0 / 0 Taken</span>
+            </div>
+            <div class="progress-track">
+              <div id="adherence-progress-bar" class="progress-fill"></div>
+            </div>
+            <div class="adherence-actions-row">
+              <span id="txt-adherence-note" style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">
+                Tap the checkbox as you take each tablet.
+              </span>
+              <button id="btn-test-alarm" class="btn-mini-listen btn-alarm-trigger">
+                🔔 Test Reminder Alarm
+              </button>
+            </div>
+          </div>
+
+          <!-- Smart System Push Notifications & Background Dose Alarms -->
+          <div class="card card-notifications" id="card-notifications-panel" style="border: 1px solid rgba(56, 189, 248, 0.35); background: linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(37, 99, 235, 0.05));">
+            <div class="card-title-row">
+              <h3 class="card-title" style="color: #38bdf8; font-size: 1.1rem;">
+                <span>🔔</span> <span id="txt-notif-title">Phone & PC Dose Reminders</span>
+              </h3>
+              <span class="badge" id="badge-notif-status" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8;">Standby</span>
+            </div>
+            <p class="notif-desc" id="txt-notif-desc" style="font-size: 0.92rem; line-height: 1.5; color: var(--text-muted); margin: 8px 0 14px 0;">
+              Get automatic notification alerts on your phone or PC when it's time to take your medicines, even when you are not on this website actively.
+            </p>
+            <div class="notif-buttons-row" style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="btn-enable-notifications" class="btn-primary-big" style="flex: 1; min-width: 170px; background: linear-gradient(135deg, #0ea5e9, #2563eb); font-size: 0.95rem; padding: 12px 16px;">
+                🔔 Enable System Alerts
+              </button>
+              <button id="btn-test-sys-notif" class="btn-mini-listen" style="padding: 10px 14px; font-weight: 600; border-color: #38bdf8; color: #38bdf8;">
+                ⚡ Test Notification
+              </button>
+            </div>
+            <div id="notif-active-times" style="margin-top: 12px; font-size: 0.88rem; color: #34d399; font-weight: 600; display: none; background: rgba(52, 211, 153, 0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(52, 211, 153, 0.25);">
+              ✅ Active Reminders: 🌅 Morning (8:00 AM) &bull; ☀️ Afternoon (1:00 PM) &bull; 🌙 Night (8:00 PM)
+            </div>
+          </div>
+
+          <!-- Calendar Sync Button Card -->
+          <div class="card card-sync-calendar" id="card-sync-calendar">
+            <div class="sync-icon-wrap">📱</div>
+            <h4 class="sync-title" id="txt-sync-title">Sync with Phone Calendar</h4>
+            <p class="sync-desc" id="txt-sync-desc">
+              Export all medication reminders to Google Calendar, Apple Calendar, or Outlook with 1 tap.
+            </p>
+            <button id="btn-export-calendar" class="btn-primary-big btn-sync-action">
+              📥 Download Reminders (.ics)
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Daily Slot Cards -->
+        <div class="grid-col-right">
+          <!-- Morning Slot -->
+          <div class="timeline-slot">
+            <div class="timeline-slot-header slot-morning">
+              <span id="txt-slot-morning-header">🌅 Morning (8:00 AM — Breakfast)</span>
+              <span class="badge" id="badge-morning-count">0 Pills</span>
+            </div>
+            <div id="slot-morning-container"></div>
+          </div>
+
+          <!-- Afternoon Slot -->
+          <div class="timeline-slot">
+            <div class="timeline-slot-header slot-afternoon">
+              <span id="txt-slot-afternoon-header">☀️ Afternoon (1:00 PM — Lunch)</span>
+              <span class="badge" id="badge-afternoon-count">0 Pills</span>
+            </div>
+            <div id="slot-afternoon-container"></div>
+          </div>
+
+          <!-- Night Slot -->
+          <div class="timeline-slot">
+            <div class="timeline-slot-header slot-night">
+              <span id="txt-slot-night-header">🌙 Night (8:00 PM — Dinner & Bedtime)</span>
+              <span class="badge" id="badge-night-count">0 Pills</span>
+            </div>
+            <div id="slot-night-container"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 4: TEACH-BACK CONFIRMATION LOOP ================= -->
+    <section id="tab-teachback" class="view-section">
+      
+      <!-- Completion View (Shown once all questions are answered) -->
+      <div id="teachback-complete-view" class="card teachback-complete-card" style="display: none;">
+        <div class="complete-trophy-icon">🏆</div>
+        <h2 class="complete-headline" id="complete-headline-text">Comprehension Check Complete!</h2>
+        <p class="complete-subtitle" id="complete-subtitle-text">You have successfully verified your understanding for all prescribed medicines.</p>
+        <div class="complete-meds-summary" id="complete-meds-list">
+          <!-- Injected via JavaScript -->
+        </div>
+        <div style="margin-top: 24px; display: flex; justify-content: center; flex-wrap: wrap; gap: 14px;">
+          <button id="btn-restart-teachback" class="btn-cta-coral" style="padding: 12px 28px;">
+            ↺ Review Questions Again
+          </button>
+          <button id="btn-complete-to-timeline" class="btn-cta-glass" style="padding: 12px 28px;">
+            ⏰ View Daily Timeline ➔
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Question Stepper Layout -->
+      <div class="desktop-grid-2" id="teachback-active-grid">
+        
+        <div class="grid-col-left">
+          <div class="teachback-card">
+            <div class="teachback-title">
+              <span>🎓</span> <span id="txt-teachback-heading">Let's Check Together</span>
+            </div>
+            
+            <!-- Question Stepper Indicator -->
+            <div class="teachback-stepper-header" id="teachback-stepper-bar" style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+              <span class="badge" id="teachback-step-counter" style="background: var(--primary); color: #000; font-weight: 800;">Question 1 of 4</span>
+              <span class="badge" id="teachback-med-target" style="background: rgba(45, 212, 191, 0.18); color: var(--secondary-light);">Medicine: Paracetamol</span>
+            </div>
+
+            <p style="font-size: 0.95rem; color: #cbd5e1; margin-bottom: 16px;" id="txt-teachback-subheading">
+              Confirming your understanding helps keep you safe. Answer by tapping an option or speaking aloud.
+            </p>
+
+            <div class="teachback-question" id="teachback-q-text">
+              When and how should you take your medicine?
+            </div>
+
+            <div class="teachback-options" id="teachback-options-container">
+              <!-- Injected via JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-col-right">
+          <!-- Voice Answer & AI Verification Section -->
+          <div class="card" style="background: rgba(21, 34, 37, 0.95); color: white; border-color: var(--border-color); text-align: center; padding: 24px;">
+            <div style="font-size: 1.1rem; color: #facc15; font-weight: 700; margin-bottom: 12px;">
+              🎙️ Speak Your Answer Aloud
+            </div>
+            <p style="font-size: 0.9rem; color: #cbd5e1; margin-bottom: 16px;">
+              Tap the microphone and tell us in your own words. CareBridge evaluates your response in real time:
+            </p>
+            <button id="btn-teachback-mic" class="btn-mic-record" aria-label="Speak your answer">
+              🎤
+            </button>
+            <div id="teachback-mic-status" style="font-size: 0.9rem; color: #cbd5e1; margin-top: 10px;">
+              Tap microphone to speak
+            </div>
+
+            <!-- Feedback Result Box -->
+            <div id="teachback-feedback-box" class="teachback-feedback" style="display: none; margin-top: 18px;">
+              <h4 id="feedback-headline" style="font-weight: 800; font-size: 1.2rem; margin-bottom: 6px;"></h4>
+              <p id="feedback-message" style="font-size: 1rem; line-height: 1.6;"></p>
+              
+              <!-- Next Question Trigger Button -->
+              <div style="margin-top: 16px;">
+                <button id="btn-teachback-next-step" class="btn-cta-coral" style="width: 100%; justify-content: center; padding: 12px 20px; font-size: 1rem;">
+                  Next Question ➔
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 5: HOSPITAL WAYFINDING & FOLLOW-UP ================= -->
+    <section id="tab-hospital" class="view-section">
+      <div class="desktop-grid-2">
+        
+        <!-- Left: Appointment & Emergencies -->
+        <div class="grid-col-left">
+          <!-- Appointment Countdown Card -->
+          <div class="countdown-banner">
+            <div>
+              <div style="font-size: 0.85rem; text-transform: uppercase; font-weight: 700; opacity: 0.9;" id="txt-next-visit-lbl">Next Doctor Visit</div>
+              <div style="font-size: 1.45rem; font-weight: 800; margin-top: 4px;" id="txt-hospital-date">In 7 Days</div>
+              <div style="font-size: 1rem; opacity: 0.9;" id="txt-hospital-dept">Cardiology Consultation OPD</div>
+            </div>
+            <button id="btn-directions-map" class="btn-primary-big btn-map-action" title="Open Google Maps Directions to Hospital">
+              📍 Get Directions
+            </button>
+          </div>
+
+          <!-- Emergency Helplines Panel -->
+          <div class="card card-emergency-panel">
+            <div class="card-title-row">
+              <h3 class="card-title" style="color: var(--danger);">
+                <span class="emergency-icon-pulse">🚨</span> Emergency Helplines
+              </h3>
+              <span class="badge" style="background: var(--danger-light); color: var(--danger); font-weight: 800;">24x7 Active</span>
+            </div>
+            <p style="font-size: 0.92rem; color: var(--text-muted); margin-bottom: 14px;">
+              Immediate emergency assistance with 1-tap direct calling:
+            </p>
+            <div class="emergency-helpline-grid">
+              <a href="tel:108" class="helpline-action-card card-ambulance" id="btn-call-ambulance">
+                <div class="helpline-icon-wrap">🚑</div>
+                <div class="helpline-info">
+                  <div class="helpline-title">Call 108 Ambulance</div>
+                  <div class="helpline-subtitle">Medical Emergency Service</div>
+                </div>
+                <div class="helpline-dial-badge">Call 108</div>
+              </a>
+
+              <a href="tel:112" class="helpline-action-card card-national" id="btn-call-national">
+                <div class="helpline-icon-wrap">🛡️</div>
+                <div class="helpline-info">
+                  <div class="helpline-title">Call 112 Helpline</div>
+                  <div class="helpline-subtitle">All-in-One National Emergency</div>
+                </div>
+                <div class="helpline-dial-badge">Call 112</div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Step-by-Step Wayfinding -->
+        <div class="grid-col-right">
+          <div class="card">
+            <div class="card-title-row">
+              <h3 class="card-title"><span>🚶</span> <span id="txt-wayfinding-title">Easy Step-by-Step Wayfinding</span></h3>
+            </div>
+            <p style="font-size: 1rem; color: var(--text-muted); margin-bottom: 12px;" id="txt-hospital-name-full">
+              Apollo Speciality Hospital — Main Campus
+            </p>
+
+            <div class="steps-list" id="hospital-steps-container">
+              <!-- Injected via JavaScript -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 6: ASK CAREBRIDGE (Q&A) ================= -->
+    <section id="tab-qa" class="view-section">
+      <div class="desktop-grid-2">
+        
+        <!-- Left: Q&A Input & Answer -->
+        <div class="grid-col-left">
+          <div class="card card-highlight">
+            <div class="card-title-row">
+              <h2 class="card-title"><span>🎙️</span> <span id="txt-qa-heading">Ask a Question About Your Medicine</span></h2>
+            </div>
+            <p style="font-size: 1rem; color: var(--text-muted); margin-bottom: 18px;">
+              Ask questions in plain words or with your voice, like "Can I take this with milk?", "What if I miss a dose?", or "When is my visit?".
+            </p>
+
+            <div class="qa-input-row">
+              <input type="text" id="qa-input-text" placeholder="Type or ask with voice..." class="qa-input-field">
+              <button id="btn-qa-mic" class="btn-icon btn-mic-qa" title="Click to speak your question" aria-label="Microphone input">
+                🎤
+              </button>
+              <button id="btn-qa-submit" class="btn-icon btn-submit-qa" title="Send question" aria-label="Send question">
+                ➔
+              </button>
+            </div>
+            <div id="qa-mic-status" style="display: none; font-size: 0.92rem; color: #a7f3d0; margin-bottom: 14px; padding: 6px 12px; background: rgba(16, 185, 129, 0.15); border-radius: var(--radius-md); border: 1px solid rgba(16, 185, 129, 0.3);">
+              🎙️ Listening... Speak your question, then tap ⏹️ to send
+            </div>
+
+            <!-- Answer Box -->
+            <div id="qa-answer-container" class="qa-answer-box" style="display: none;">
+              <div class="qa-answer-title" id="qa-answer-title">
+                CareBridge Answer:
+              </div>
+              <div id="qa-answer-text" class="qa-answer-text"></div>
+              <div id="qa-disclaimer" class="qa-disclaimer"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Quick Questions & Suggestions -->
+        <div class="grid-col-right">
+          <div class="card">
+            <div class="card-title-row">
+              <h3 class="card-title"><span>💡</span> <span id="txt-qa-chips-title">Frequently Asked Patient Questions</span></h3>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px;" id="txt-qa-chips-desc">
+              Click any quick topic below to receive an instant plain-language answer:
+            </p>
+            <div class="qa-chips-grid" id="qa-chips-container">
+              <!-- Injected via JavaScript based on language -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Sticky Bottom Emergency Dock -->
+  <footer class="bottom-dock">
+    <div class="bottom-dock-inner">
+      <button class="btn-sos" id="btn-open-sos-modal">
+        <span>🚨</span> <span id="lbl-bottom-sos">Emergency</span>
+      </button>
+      <div class="bottom-patient-label" id="lbl-active-patient">
+        Patient: Ramesh Chandra (68)
+      </div>
+      <button class="btn-mini-listen btn-bottom-listen" id="btn-quick-listen-bottom">
+        <span>🔊</span> <span id="lbl-bottom-listen">Listen Plan</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- ================= MODAL: CAMERA VIEWFINDER ================= -->
+  <div class="modal-overlay" id="modal-camera">
+    <div class="alarm-modal-card" style="max-width: 560px; border-color: var(--primary);">
+      <h3 style="font-family: var(--font-display); font-size: 1.4rem; margin-bottom: 14px;">📷 Prescription Camera</h3>
+      <div class="camera-view-box">
+        <video id="camera-video" autoplay playsinline></video>
+        <div class="camera-crosshair"></div>
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 18px;">
+        <button id="btn-camera-capture" class="btn-primary-big" style="flex: 1; background: var(--primary); color: white;">
+          📸 Capture & Read
+        </button>
+        <button id="btn-camera-close" class="btn-icon" style="height: auto; padding: 0 24px;">
+          ✕ Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: REMINDER ALARM ================= -->
+  <div class="modal-overlay" id="modal-alarm">
+    <div class="alarm-modal-card">
+      <div class="alarm-icon-pulse">🔔</div>
+      <h2 style="font-family: var(--font-display); font-size: 1.7rem; color: var(--primary-dark); margin: 12px 0;">
+        Time for Your Medicine!
+      </h2>
+      <p style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;" id="txt-alarm-med-name">
+        Cefuroxime Axetil 500 mg
+      </p>
+      <p style="font-size: 1.05rem; color: var(--text-muted); margin-bottom: 24px;" id="txt-alarm-instruction">
+        Take 1 tablet with a full glass of water after your meal.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <button id="btn-alarm-taken" class="btn-primary-big" style="background: var(--success); color: white;">
+          ✅ I Have Taken It Now
+        </button>
+        <button id="btn-alarm-snooze" class="btn-icon" style="width: 100%; height: 50px; font-size: 1rem; font-weight: 600;">
+          ⏰ Remind me in 10 minutes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: EMERGENCY SOS ================= -->
+  <div class="modal-overlay" id="modal-sos">
+    <div class="alarm-modal-card modal-emergency-card">
+      <div class="emergency-modal-header">
+        <div class="emergency-beacon-wrap">🚨</div>
+        <h2 class="emergency-modal-title">Emergency Assistance</h2>
+        <span class="emergency-live-tag">24x7 Immediate Response</span>
+      </div>
+      <p class="emergency-modal-desc">
+        If you are experiencing chest pain, difficulty breathing, sudden weakness, or severe bleeding, tap below to call immediately:
+      </p>
+
+      <div class="emergency-modal-actions">
+        <a href="tel:108" class="helpline-action-card card-ambulance modal-helpline-btn" id="btn-modal-ambulance">
+          <div class="helpline-icon-wrap">🚑</div>
+          <div class="helpline-info">
+            <div class="helpline-title">Call 108 Ambulance</div>
+            <div class="helpline-subtitle">Medical Emergency & Paramedics</div>
+          </div>
+          <div class="helpline-dial-badge">DIAL 108</div>
+        </a>
+
+        <a href="tel:112" class="helpline-action-card card-national modal-helpline-btn" id="btn-modal-national">
+          <div class="helpline-icon-wrap">🛡️</div>
+          <div class="helpline-info">
+            <div class="helpline-title">Call 112 Emergency Services</div>
+            <div class="helpline-subtitle">All-in-One National Emergency Line</div>
+          </div>
+          <div class="helpline-dial-badge">DIAL 112</div>
+        </a>
+
+        <button id="btn-close-sos" class="btn-modal-dismiss">
+          ✕ Dismiss Window
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Application Javascript -->
+<script src="/static/app.js"></script>
+</body>
+</html>
