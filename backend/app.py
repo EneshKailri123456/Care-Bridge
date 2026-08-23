@@ -222,8 +222,10 @@ async def speech_to_text(
     except Exception as e:
         return {"transcript": "", "success": False, "error": str(e)}
 
-# Static Frontend mounting
-frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+# Static Frontend / Docs mounting
+docs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "docs"))
+frontend_dir = docs_dir if os.path.exists(docs_dir) else os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+
 if os.path.exists(frontend_dir):
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
@@ -246,7 +248,7 @@ def serve_index():
     index_file = os.path.join(frontend_dir, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "CareCompass API is running. Frontend static directory not initialized yet."}
+    return {"message": "CareCompass API is running. Docs static directory not initialized yet."}
 
 if __name__ == "__main__":
     import uvicorn
