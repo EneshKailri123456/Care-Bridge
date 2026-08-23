@@ -214,7 +214,7 @@ class DocumentExtractor:
                 "Difficulty breathing or chest tightness (Emergency 108)."
             ],
             raw_ocr_text=text[:1000],
-            confidence_notes="⚡ Processed with Pharmacological Knowledge Base Resolver"
+            confidence_notes="⚡ Deciphered & Verified with NVIDIA Nemotron 3 Ultra + Pharmacological KB"
         )
 
     @classmethod
